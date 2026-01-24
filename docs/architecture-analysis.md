@@ -1,3 +1,7 @@
+[← Back to Main README](../README.md)
+
+---
+
 # Current Single-Player Architecture Analysis
 **Task 1.1 - Analysis for Multiplayer Transition**  
 **Date:** January 23, 2026
@@ -393,3 +397,7 @@ With current architecture analysis complete, proceed to:
 - ⏭️ **1.8 Error Handling and Resilience**
 - ⏭️ **1.9 Logging and Observability**
 - ⏭️ **1.10 Create Architecture Documentation**
+
+---
+
+[← Back to Main README](../README.md)

@@ -1,3 +1,7 @@
+← Back to Main README](../../README.md)
+
+---
+
 # Signal Bot Setup Guide
 
 This guide covers setting up the Signal Messenger interface for Layered Realms.
@@ -272,3 +276,7 @@ For production use:
 - Implement player-to-player messaging
 - Add rate limiting per phone number
 - Create admin commands for moderation
+
+---
+
+[← Back to Main README](../../README.md)

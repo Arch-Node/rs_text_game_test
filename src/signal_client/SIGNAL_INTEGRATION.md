@@ -1,3 +1,7 @@
+[← Back to Main README](../../README.md)
+
+---
+
 # Signal Integration Plan
 
 ## Overview
@@ -424,3 +428,7 @@ cargo run --bin signal_bot --features signal-client
 **Status:** Ready to implement
 **Dependencies:** SpacetimeDB running, signal-cli-rest-api, phone number for bot
 **Blocked by:** None
+
+---
+
+[← Back to Main README](../../README.md)

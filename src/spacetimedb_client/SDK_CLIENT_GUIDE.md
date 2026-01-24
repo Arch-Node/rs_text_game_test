@@ -1,3 +1,7 @@
+[← Back to Main README](../../README.md)
+
+---
+
 # SpacetimeDB SDK Client Guide
 
 ## ✅ What We've Built
@@ -197,3 +201,7 @@ Choose one:
 ---
 
 **Status**: SDK bindings ✅ generated, demo client ✅ compiled, full integration ⚠️ pending
+
+---
+
+[← Back to Main README](../../README.md)

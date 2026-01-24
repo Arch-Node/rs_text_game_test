@@ -1,3 +1,7 @@
+[← Back to Main README](../../README.md)
+
+---
+
 # Signal Bot Implementation Summary
 
 ## ✅ What Was Built
@@ -278,3 +282,7 @@ The foundation is solid. With Phase 2 improvements (session fixes, result subscr
 *Generated: 2025-01-23*
 *Project: Layered Realms - Multiplayer Text Adventure*
 *Technology Stack: Rust, SpacetimeDB, Signal Messenger, actix-web*
+
+---
+
+[← Back to Main README](../../README.md)

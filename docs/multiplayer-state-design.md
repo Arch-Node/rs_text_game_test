@@ -1,3 +1,7 @@
+[← Back to Main README](../README.md)
+
+---
+
 # Multiplayer State Model Design
 **Task 1.2 - Tick-Based Action Queue System**  
 **Date:** January 23, 2026
@@ -860,3 +864,7 @@ let tick_config = if cfg!(debug_assertions) {
 - ⏭️ 1.3 Design Command/Message Protocol
 - ⏭️ 1.4 Architecture Pattern Selection (partially done - tick-based chosen)
 - ⏭️ 1.5 Session Abstraction Layer
+
+---
+
+[← Back to Main README](../README.md)

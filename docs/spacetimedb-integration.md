@@ -1,3 +1,7 @@
+[← Back to Main README](../README.md)
+
+---
+
 # SpacetimeDB Integration Plan
 
 ## Overview
@@ -260,3 +264,7 @@ After gameplay is working:
 - [Rust SDK Reference](https://docs.rs/spacetimedb/latest/spacetimedb/)
 - [BitCraft Case Study](https://spacetimedb.com/blog/bitcraft-spacetimedb) (MMORPG using SpacetimeDB)
 - [GitHub Examples](https://github.com/ClockworkLabs/SpacetimeDB/tree/master/modules)
+
+---
+
+[← Back to Main README](../README.md)

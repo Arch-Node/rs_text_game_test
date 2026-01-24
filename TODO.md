@@ -1,14 +1,72 @@
+[← Back to Main README](README.md)
+
+---
+
 # Multiplayer Skills-Heavy Text Game - Development Roadmap
 
 ## Overview
-Transform the single-player terminal game into a multiplayer, skills-focused text adventure accessible via Signal, terminal, and SMS interfaces.
+
+**Current Status:** Phase 1 substantially complete - SpacetimeDB backend operational, Signal and Discord bots fully implemented with DM-only gameplay. Terminal client needs fixing.
+
+**Project Structure:**
+```
+rs_text_game_test/
+├── src/
+│   ├── lib.rs                      # Library exports
+│   ├── bin/
+│   │   ├── terminal_client.rs      # ⚠️ HTTP client (needs query endpoint fix)
+│   │   ├── sdk_client.rs           # ✅ SDK demo (works, needs full integration)
+│   │   ├── signal_bot.rs           # ✅ Signal Messenger bot (Phase 1 complete)
+│   │   └── discord_bot.rs          # ✅ Discord bot (implementation complete)
+│   ├── terminal_client/            # HTTP client modules
+│   ├── spacetimedb_client/         # Generated SDK bindings (19 files)
+│   ├── signal_client/              # Signal bot (webhook + SpacetimeDB HTTP)
+│   └── discord_client/             # Discord bot (gateway + SpacetimeDB HTTP)
+├── docs/                           # Architecture documentation
+├── tests/                          # Test scripts
+└── TODO.md                         # This file
+
+text_game_stdb/                     # Separate SpacetimeDB module repo
+└── src/lib.rs                      # ✅ Published WASM module
+```
+
+**Completed Interfaces:**
+- ✅ **Signal Bot** - Webhook-based, DM-only gameplay after group auth
+- ✅ **Discord Bot** - Gateway-based, DM-only gameplay after guild auth  
+- ⚠️ **Terminal Client** - HTTP-based, has query endpoint issue
+
+Transform the single-player terminal game into a multiplayer, skills-focused text adventure accessible via Discord, Signal, and Terminal interfaces.
 
 ## Design Philosophy
 - **Skills-heavy gameplay** - Most challenges solvable through skill checks rather than combat
 - **Light combat** - Quick, avoidable through stealth/persuasion, skill-based resolution
 - **Multiple solution paths** - Different skills provide different approaches
 - **Multiplayer collaboration** - Players can cooperate using complementary skills
-- **Multi-platform** - Play via Signal messenger, terminal client, or text messages
+- **Multi-platform** - Play via Discord, Signal messenger, or terminal client
+- **DM-only gameplay** - Keep public channels clean, all game content in direct messages
+
+---
+
+## Phase Overview
+
+### Phase 1: Core Infrastructure (95% Complete)
+**Status:** SpacetimeDB backend operational. Discord and Signal bots fully functional with DM-only gameplay. Terminal client needs fixing. Event broadcasting not yet implemented.
+
+**Critical Path:**
+1. Fix terminal client query endpoint bug → Enable terminal gameplay
+2. Implement tick result feedback → Players see their action outcomes
+3. Add event broadcasting → Real-time multi-player interactions
+
+See detailed task breakdown below.
+
+### Phase 2: Skills & Character Systems (Not Started)
+Create skill-heavy gameplay mechanics with character classes focused on non-combat solutions.
+
+### Phase 3: World & Content (Not Started)
+Build dimensional world with exploration, puzzles, and multi-solution challenges.
+
+### Phase 4: Advanced Features (Not Started)
+Add combat, items, magic, and social systems.
 
 ---
 
@@ -69,9 +127,11 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
   - [x] Tested with CLI commands
   - [x] 10 test rooms populated
 - [x] **Session Management:**
-  - [x] Session struct with interface type (Terminal/Signal/SMS)
-  - [x] ConnectionIdentifiers support (phone, signal ID, IP, MAC)
+  - [x] Session struct with interface_type (Terminal/Signal/Discord)
+  - [x] ConnectionIdentifiers: phone (Signal), Discord user ID, IP address
   - [x] SpacetimeDB Identity-based authentication
+  - [x] Session cached in bot memory for performance
+  - [x] Player linked to session in database
 - [x] **Command Queue System:**
   - [x] Tick-based execution (15s production, 3s testing)
   - [x] One queued command per player at a time
@@ -86,20 +146,26 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ##### 1.3 Design Command/Message Protocol
 - [x] **Instant vs Queued Commands:**
-  - [x] Instant: look, examine, inventory, status, help, say, tell, emote, who, score, time
-  - [x] Queued: movement, actions, anything that changes world state
-- [ ] **Inbound Command Envelope:**
-  - [ ] Define `CommandRequest` structure for different interfaces
-  - [ ] Design command validation and sanitization
-  - [ ] Plan rate limiting per session/player (done: one command per player)
-- [ ] **Outbound Response Envelope:**
-  - [ ] Define message types (narrative, system, chat, combat, error)
-  - [ ] Define formatting hints for different interfaces (SMS char limits, etc.)
-  - [ ] Plan message batching and chunking strategies
+  - [x] Instant: help, status (bypass tick system)
+  - [x] Queued: movement (north/south/east/west/up/down), look, all world-changing actions
+  - [x] Implemented in both Signal and Discord bots
+- [x] **Inbound Command Envelope:**
+  - [x] Simple text commands from Discord/Signal
+  - [x] Authentication via `auth PlayerName` command
+  - [x] Rate limiting: one queued command per player
+  - [x] Command validation before queueing
+- [x] **Outbound Response Envelope:**
+  - [x] Plain text for Discord and Signal
+  - [x] Discord markdown support (bold, code blocks)
+  - [x] Emoji integration (✅ ❌ 📧 🎮)
+  - [x] Message length limits (Discord: 2000 chars)
+  - [x] Error formatting with helpful messages
 - [ ] **Event Broadcasting:**
   - [ ] Design event filtering (who needs to see what)
   - [ ] Plan event delivery guarantees
   - [ ] Design event subscription system (room-based, proximity-based, global)
+  - [ ] Return tick results to clients
+  - [ ] Real-time room updates when players enter/leave
 
 ##### 1.4 Architecture Pattern Selection
 - [x] **Core Pattern Selected:** Tick-based event-driven with command queue
@@ -111,18 +177,22 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] **Document pros/cons of chosen pattern**
 
 ##### 1.5 Session Abstraction Layer
-- [x] **ConnectionIdentifiers Defined:**
-  - [x] Signal ID, phone number, IP address, MAC address, device fingerprint
-  - [x] Stored on Session (not Player) to support multi-device play
-- [ ] **Define Session Interface Trait:**
-  - [ ] send_message() with format limits per interface
-  - [ ] send_prompt()
-  - [ ] get_interface_type()
-  - [ ] get_format_limits() (SMS: 160 chars, etc.)
-- [ ] **Account vs Character Mapping:**
-  - [ ] One account can have multiple characters
-  - [ ] Design character selection flow per interface
-  - [ ] Handle multiple sessions for same account (different devices)
+- [x] **ConnectionIdentifiers Implemented:**
+  - [x] Signal: Phone number
+  - [x] Discord: User ID (snowflake)
+  - [x] Terminal: Connection string/IP
+  - [x] Stored on Session table in SpacetimeDB
+  - [x] Cached in bot memory (HashMap) for performance
+- [x] **Interface-Specific Implementation:**
+  - [x] Signal bot: send_message() via signal-cli-rest-api HTTP
+  - [x] Discord bot: msg.reply() via Serenity gateway
+  - [x] Terminal client: HTTP response (needs fixing)
+  - [x] Format limits enforced (Discord: 2000 chars)
+- [ ] **Multi-Device Support (Future):**
+  - [ ] One account, multiple characters
+  - [ ] Character selection flow per interface
+  - [ ] Handle multiple sessions for same account
+  - [ ] Session switching between devices
 
 ##### 1.6 State Synchronization Strategy
 - [x] **SpacetimeDB Handles Most Sync:**
@@ -142,15 +212,20 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 ##### 1.7 Authentication and Identity
 - [x] **SpacetimeDB Identity System:**
   - [x] Each session has unique Identity
-  - [x] Link Identity → Session → Player
-- [ ] **Interface-Specific Auth:**
-  - [ ] Terminal: username/password or token
-  - [ ] Signal: phone number + registration
-  - [ ] SMS: phone number + PIN
-- [ ] **Account System Design:**
-  - [ ] User registration flow per interface
+  - [x] Link Identity → Session → Player in database
+- [x] **Interface-Specific Auth (Implemented):**
+  - [x] Discord: `@Bot auth PlayerName` in guild → DM sent
+  - [x] Signal: `auth PlayerName` in group → DM sent
+  - [x] Terminal: Direct authentication flow (needs fixing)
+  - [x] DM-only gameplay after authentication
+- [x] **Player Creation:**
+  - [x] Players created in database via `authenticate_player` reducer
+  - [x] Player persists across bot restarts
+  - [x] Linked to Discord user ID or Signal phone number
+- [ ] **Future Account System:**
+  - [ ] User registration with password (for terminal)
   - [ ] Account recovery mechanisms
-  - [ ] Guest/anonymous sessions (if supported)
+  - [ ] Guest/anonymous sessions
 
 ##### 1.8 Error Handling and Resilience
 - [x] **Command Validation Errors:**
@@ -192,20 +267,70 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Component interaction diagrams
 - [ ] API specifications for interface modules
 
-#### ⬜ Task 2: Add Networking Dependencies
-- [ ] Add `tokio` for async runtime
-- [ ] Add `spacetimedb` SDK for backend (replaces traditional database + server)
-- [ ] Add Signal protocol support (libsignal-service-rs or signal-cli wrapper)
-- [ ] Add websocket/TCP libraries for terminal interface (or use SpacetimeDB's built-in networking)
-- [ ] Add SMS gateway support (twilio-rs or similar)
-- [ ] Define logging levels and structured fields (session, player, command)
-- [ ] Choose logging crates and error handling patterns
-- [ ] Plan for tracing async flows and server diagnostics
-- [ ] Update Cargo.toml with all necessary crates
-- [ ] **Note:** SpacetimeDB handles much of the networking/state sync automatically
+#### ⚠️ Task 2: Interface Client Implementation
 
-#### ⬜ Task 3: Create Player Entity System
-- [ ] Expand Player model with name/id
+**Status:** ✅ Signal and Discord complete, ⚠️ Terminal needs fixing
+
+##### 2.1 Signal Messenger Bot (✅ Complete)
+- [x] Webhook server using actix-web
+- [x] Integration with signal-cli-rest-api
+- [x] Message handler with authentication via `auth PlayerName`
+- [x] Group authentication with DM redirect
+- [x] DM-only gameplay (keeps groups clean)
+- [x] Command routing (instant vs queued)
+- [x] SpacetimeDB HTTP API integration
+- [x] Session and player caching
+- [x] Background tick processor (3 seconds)
+- [x] Message formatting with emojis
+- [x] Complete setup documentation
+
+##### 2.2 Discord Bot (✅ Complete)
+- [x] Gateway-based bot using Serenity 0.12
+- [x] EventHandler implementation
+- [x] Authentication via `@Bot auth PlayerName`
+- [x] Guild authentication with auto-DM
+- [x] DM-only gameplay (keeps channels clean)
+- [x] Message handling for DMs and mentions
+- [x] SpacetimeDB HTTP API integration
+- [x] Session and player caching (Arc<RwLock<HashMap>>)
+- [x] Background tick processor (3 seconds)
+- [x] Discord-specific formatting
+- [x] Error handling with anyhow::Result
+- [x] Complete setup documentation
+
+##### 2.3 Terminal Client (⚠️ Needs Fix)
+- [x] HTTP-based client using reqwest
+- [x] Authentication flow
+- [x] Display formatting
+- [x] Input handling
+- [ ] **BLOCKER:** Fix query endpoint (`/database/text-game/query` returns 404)
+- [ ] Complete game loop
+- [ ] Test full flow
+- [ ] Proper error messages
+
+##### 2.4 SDK Client (⚠️ Partial)
+- [x] SDK bindings generated (19 files)
+- [x] Demo client compiled
+- [x] Type-safe API confirmed working
+- [ ] Full integration into terminal_client
+- [ ] Replace HTTP calls with SDK calls
+- [ ] Real-time subscriptions
+- [ ] Event handling
+
+#### ⚠️ Task 3: Player Entity and Storage
+
+**Status:** ✅ Basic implementation complete, needs expansion
+
+##### 3.1 Player Table (✅ Complete)
+- [x] Player table in SpacetimeDB with id, name, account_id
+- [x] Position tracking (x, y, z, dimension)
+- [x] Status field
+- [x] Last action timestamp
+- [x] Player creation via `authenticate_player` reducer
+- [x] Storage persists across bot restarts
+
+##### 3.2 Player Features (⏳ Future)
+- [ ] Expand Player model with class
 - [ ] Add inventory system reference
 - [ ] Add stats (health, mana, stamina)
 - [ ] Add skill levels
@@ -213,49 +338,60 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Add equipped items
 - [ ] Create PlayerManager to track all connected players
 
-#### ⬜ Task 4: Add Persistence Layer
-- [ ] **SpacetimeDB Integration** (chosen backend)
-  - [ ] Install SpacetimeDB CLI and start local instance
-  - [ ] Add `spacetimedb` Rust SDK dependency to Cargo.toml
-  - [ ] Define SpacetimeDB tables for game state:
-    - [ ] `Player` table (id, name, account_id, class, stats, skills)
-    - [ ] `Session` table (session_id, player_id, interface_type, connection_ids, auth_state)
-    - [ ] `WorldState` table (room_occupancy, dynamic_items, npc_positions)
-    - [ ] `CommandLog` table (audit trail of all commands)
-  - [ ] Create SpacetimeDB reducers (stored procedures):
-    - [ ] `authenticate_session` - Validate and create session
-    - [ ] `submit_command` - Queue player command
-    - [ ] `execute_tick` - Process all queued commands
-    - [ ] `broadcast_event` - Send game events to relevant sessions
-  - [ ] Design schema for player data with automatic sync
-  - [ ] Implement world state saving with ACID guarantees
-  - [ ] Add inventory/skills/progress persistence
-  - [ ] Enable server restart recovery (automatic with SpacetimeDB)
-  - [ ] Configure SpacetimeDB subscriptions for real-time client updates
-- [ ] **Why SpacetimeDB:**
-  - Built-in real-time state synchronization (no custom protocol needed)
-  - ACID transactions solve race conditions (two players taking same item)
-  - Game logic runs in database as WASM modules (100μs latency)
-  - Automatic persistence and scaling (no Docker/K8s complexity)
-  - Perfect fit for multiplayer games (used by BitCraft MMORPG)
-  - Client SDKs auto-generated for Rust/TypeScript/C#
-**Build SpacetimeDB Module** (instead of traditional server)
-  - [ ] Define module structure with tables and reducers
-  - [ ] Implement world state management as SpacetimeDB tables
-  - [ ] Add player connection handling via SpacetimeDB subscriptions
-  - [ ] Create command routing system as reducers
-  - [ ] Implement state persistence (automatic with SpacetimeDB)
-  - [ ] Add event broadcasting using SpacetimeDB's subscription system
-  - [ ] Create tick system for world updates (reducer scheduled at intervals)
-  - [ ] Compile module to WASM
-  - [ ] Publish to local SpacetimeDB instance
-  - [ ] Test real-time sync and state updates
-- [ ] **Alternative: Build custom adapter layer**
-  - [ ] If SpacetimeDB's model doesn't fit tick-based architecture
-  - [ ] Create thin layer between SpacetimeDB and existing multiplayer code
-  - [ ] Use SpacetimeDB primarily as persistent store with pub/sub
-- [ ] Add event broadcasting to all clients
-- [ ] Create tick system for world updates
+#### ✅ Task 4: Persistence and State Management
+
+**Status:** ✅ Complete with SpacetimeDB
+
+##### 4.1 SpacetimeDB Backend (✅ Complete)
+- [x] SpacetimeDB CLI installed and running (localhost:3000)
+- [x] Module structure with tables and reducers
+- [x] **Tables Defined:**
+  - [x] `player` - Characters with 4D positions
+  - [x] `room` - Locations with 3D coordinates and descriptions
+  - [x] `session` - Active connections (Terminal/Signal/Discord)
+  - [x] `queued_command` - Commands awaiting tick execution
+  - [x] `command_log` - Complete audit trail
+- [x] **Reducers Implemented:**
+  - [x] `connect_session` - Create new connection
+  - [x] `authenticate_player` - Link session to player (creates player in DB)
+  - [x] `submit_command` - Queue command (one per player)
+  - [x] `execute_tick` - Process all queued commands
+  - [x] `get_player_info` - Query player state
+  - [x] `create_room` - Insert room into database
+  - [x] `get_current_room` - Query room at player's position
+  - [x] `list_rooms_in_dimension` - Query all rooms
+- [x] Compiled to WASM
+- [x] Published to local server (text-game database)
+- [x] 10 test rooms populated
+- [x] ACID transactions (automatic)
+- [x] Automatic persistence
+
+##### 4.2 Client SDK (✅ Generated)
+- [x] Type-safe Rust bindings auto-generated
+- [x] 19 files with all tables and reducers
+- [x] Used by SDK client demo
+
+#### ⚠️ Task 5: Tick System and Event Broadcasting
+
+**Status:** ✅ Tick system works, ⚠️ Results not returned to clients yet
+
+##### 5.1 Tick System (✅ Complete)
+- [x] Background tick processor in both bots (3 second interval)
+- [x] `execute_tick` reducer processes all queued commands
+- [x] One command per player limit
+- [x] Command validation
+- [x] Movement commands work (north, south, east, west, up, down)
+- [x] Room transitions
+- [x] Command logging
+
+##### 5.2 Event Broadcasting (⏳ Not Started)
+- [ ] Return tick results to clients
+- [ ] Real-time room updates
+- [ ] Player visibility in same room
+- [ ] Event filtering (proximity-based)
+- [ ] Cross-dimension awareness
+- [ ] SpacetimeDB subscription system
+- [ ] Event types (movement, chat, actions, combat, system)
 
 ---
 
@@ -383,52 +519,9 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ---
 
-### Phase 6: Network Interfaces
+### Phase 6: Multiplayer Features
 
-#### ⬜ Task 17: Implement Terminal Interface (Refactor Existing)
-- [ ] Refactor current terminal interface to connect to server
-- [ ] Add connection handling
-- [ ] Implement async input/output
-- [ ] Add multiplayer awareness (see other players)
-- [ ] Improve formatting for better readability
-- [ ] Handle disconnection/reconnection
-
-#### ✅ Task 18: Signal Messenger Interface (Phase 1 Complete)
-
-**Status:** Basic functionality working, see [SIGNAL_STATUS.md](../SIGNAL_STATUS.md)
-
-**Completed:**
-- [x] Create Signal bot with signal-cli-rest-api integration
-- [x] Implement webhook server (actix-web on port 3001)
-- [x] Message parsing and command routing
-- [x] Add command execution via SpacetimeDB
-- [x] Format responses with emojis (📍 🚶 ✅ ❌)
-- [x] Manage player sessions via phone numbers (in-memory cache)
-- [x] Authentication flow (phone → character name)
-- [x] Background tick processor (3 seconds)
-- [x] Complete setup documentation
-
-**Phase 2 TODO:**
-- [ ] Query session table after creation
-- [ ] Implement command_log subscription
-- [ ] Support Signal group chats
-- [ ] Rate limiting per phone number
-- [ ] Database-backed session persistence
-
-**Documentation:** [SIGNAL_BOT_SETUP.md](../SIGNAL_BOT_SETUP.md), [SIGNAL_STATUS.md](../SIGNAL_STATUS.md)
-
-#### ⬜ Task 19: Implement Text/SMS Interface
-- [ ] Create text message interface using Twilio or similar
-- [ ] Implement SMS parsing
-- [ ] Handle response chunking (SMS length limits)
-- [ ] Add session management
-- [ ] Create command shortcuts for mobile
-
----
-
-### Phase 7: Multiplayer Features
-
-#### ⬜ Task 20: Create Player Interaction Commands
+#### ⬜ Task 16: Create Player Interaction Commands
 - [ ] Add chat commands (say/tell/whisper)
 - [ ] Implement trade system with other players
 - [ ] Add examine other players
@@ -437,7 +530,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
   - Teach skills to other players
   - Collaborate on challenges
 
-#### ⬜ Task 21: Create Admin/Game Master Tools
+#### ⬜ Task 17: Create Admin/Game Master Tools
 - [ ] Build admin commands for spawning items/NPCs
 - [ ] Add teleporting players
 - [ ] Enable world modification
@@ -447,9 +540,9 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ---
 
-### Phase 8: Testing & Documentation
+### Phase 7: Testing & Documentation
 
-#### ⬜ Task 22: Write Comprehensive Tests
+#### ⬜ Task 18: Write Comprehensive Tests
 - [ ] Add unit tests for skills system
 - [ ] Test combat mechanics
 - [ ] Test inventory management
@@ -458,7 +551,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Test server-client communication
 - [ ] Test persistence layer
 
-#### ⬜ Task 23: Create Documentation
+#### ⬜ Task 19: Create Documentation
 - [ ] Document multiplayer architecture
 - [ ] Write skills system guide
 - [ ] Create player handbook
@@ -469,22 +562,20 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 ---
 
 ## Current Status
-**Phase:** Planning Complete  
-**Next Steps:** Begin Phase 1 with Task 1 (Multiplayer Architecture) or Task 6 (Skills System)  
+**Phase 1:** 95% Complete (Terminal client needs fix, event broadcasting pending)  
+**Next Steps:** Fix terminal client query endpoint → Implement tick result feedback → Add event broadcasting  
 **Date:** January 23, 2026
 
 ---
 
-## Task Summary
-- **Total Tasks:** 23 (plus Task 0 completed)
-- **Phase 1 (Infrastructure):** Tasks 1-5
-- **Phase 2 (Skills & Classes):** Tasks 6-8
-- **Phase 3 (Content Systems):** Tasks 9-14
-- **Phase 4 (Combat):** Task 15
-- **Phase 5 (AI Generation):** Task 16
-- **Phase 6 (Network Interfaces):** Tasks 17-19
-- **Phase 7 (Multiplayer):** Tasks 20-21
-- **Phase 8 (Testing & Docs):** Tasks 22-23
+## Task Summary by Phase
+- **Phase 1 (Infrastructure):** Tasks 0-5 [95% Complete]
+- **Phase 2 (Skills & Classes):** Tasks 6-8 [Not Started]
+- **Phase 3 (World & Content):** Tasks 9-14 [Not Started]
+- **Phase 4 (Combat):** Task 15 [Not Started]
+- **Phase 5 (AI Generation):** Task 16 [Not Started]
+- **Phase 6 (Multiplayer Features):** Tasks 16-17 [Not Started]
+- **Phase 7 (Testing & Docs):** Tasks 18-19 [Not Started]
 
 ---
 
@@ -493,3 +584,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - Combat should be avoidable and quick when it occurs
 - Multiple solution paths encourage different character builds
 - Cross-platform accessibility is key to multiplayer engagement
+
+---
+
+[← Back to Main README](README.md)

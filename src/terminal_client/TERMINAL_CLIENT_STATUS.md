@@ -1,3 +1,7 @@
+[← Back to Main README](../../README.md)
+
+---
+
 # Terminal Client Testing Status
 
 ## ✅ Backend Ready
@@ -114,3 +118,7 @@ esac
 ```
 
 This would work immediately while we build the proper async client!
+
+---
+
+[← Back to Main README](../../README.md)

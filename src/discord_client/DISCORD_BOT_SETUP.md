@@ -1,3 +1,7 @@
+[← Back to Main README](../../README.md)
+
+---
+
 # Discord Bot Setup Guide
 
 This guide covers setting up the Discord bot interface for the text adventure game.
@@ -297,3 +301,7 @@ This reduces API calls to SpacetimeDB.
 - [Discord Developer Portal](https://discord.com/developers/applications)
 - [Serenity Documentation](https://docs.rs/serenity/)
 - [SpacetimeDB Documentation](https://spacetimedb.com/docs)
+
+---
+
+[← Back to Main README](../../README.md)

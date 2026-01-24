@@ -1,3 +1,7 @@
+[← Back to Main README](../../README.md)
+
+---
+
 # Signal Integration Status
 
 ## Implementation: Phase 1 Complete ✅

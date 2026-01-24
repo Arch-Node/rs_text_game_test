@@ -1,3 +1,7 @@
+[← Back to Main README](../../README.md)
+
+---
+
 # Discord Bot Status
 
 ## Overview
@@ -273,3 +277,7 @@ All errors use `anyhow::Result` for:
 - [Serenity Documentation](https://docs.rs/serenity/)
 - [Discord Developer Portal](https://discord.com/developers/applications)
 - [SpacetimeDB Docs](https://spacetimedb.com/docs)
+
+---
+
+[← Back to Main README](../../README.md)

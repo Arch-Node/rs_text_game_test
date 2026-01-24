@@ -1,3 +1,7 @@
+[← Back to Main README](../README.md)
+
+---
+
 # SpacetimeDB Quick Start Guide
 
 ## Installation Complete! ✅
@@ -176,3 +180,7 @@ Would you like to:
 3. **Explore SpacetimeDB features** - Test queries, subscriptions, real-time updates
 
 Choose your path!
+
+---
+
+[← Back to Main README](../README.md)
