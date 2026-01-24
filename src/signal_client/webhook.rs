@@ -68,12 +68,6 @@ async fn handle_webhook(
         }
     };
     
-    // Ignore group messages for now
-    if data_msg.group_info.is_some() {
-        log::debug!("Ignoring group message");
-        return HttpResponse::Ok().finish();
-    }
-    
     // Extract text
     let text = match &data_msg.message {
         Some(txt) if !txt.trim().is_empty() => txt.trim(),
@@ -84,9 +78,10 @@ async fn handle_webhook(
     };
     
     let sender = &envelope.source;
+    let is_group = data_msg.group_info.is_some();
     
-    // Handle message directly (no spawn for now to avoid Send issues)
-    bot.handle_message(sender, text).await;
+    // Handle message (group or DM)
+    bot.handle_message(sender, text, is_group).await;
     
     HttpResponse::Ok().finish()
 }

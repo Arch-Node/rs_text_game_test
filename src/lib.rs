@@ -13,3 +13,7 @@ pub mod spacetimedb_client;
 // Signal messenger client
 #[cfg(feature = "signal-client")]
 pub mod signal_client;
+
+// Discord bot client
+#[cfg(feature = "discord-client")]
+pub mod discord_client;

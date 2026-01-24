@@ -88,8 +88,11 @@ Signal Messenger
 ## Current Capabilities
 
 ✅ Receive Signal messages via webhook
-✅ User authentication (phone → character name)
+✅ User authentication with `auth PlayerName` command
+✅ Group authentication with DM redirect
+✅ DM-only gameplay (keeps group chats clean)
 ✅ Session management (cached in-memory)
+✅ Player storage in SpacetimeDB `player` table
 ✅ Command parsing and routing
 ✅ Instant commands (help, look, status)
 ✅ Queued commands (movement)

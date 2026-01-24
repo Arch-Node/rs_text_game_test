@@ -100,27 +100,51 @@ The bot will:
 
 ## Step 5: Test the Bot
 
-1. Send a message from your personal Signal to the bot's number
-2. The first message should be your character name
-3. The bot will authenticate you and respond with welcome message
-4. Send commands like `north`, `look`, `status`, etc.
+### Testing Authentication
 
-Example conversation:
+**In a group chat or DM:**
+1. Send: `auth YourPlayerName`
+2. Bot authenticates you
+3. If in a group, bot sends you a DM to continue playing
+
+**In a direct message:**
+1. Send: `auth YourPlayerName`
+2. Bot welcomes you and you can start playing immediately
+
+Example DM conversation:
 
 ```
-You: TestPlayer
-Bot: 👋 Welcome, TestPlayer! You are in Town Square.
-     Commands: north, south, east, west, up, down, look, help
+You: auth TestPlayer
+Bot: Welcome, TestPlayer! 🎮
+     You are in Town Square.
+     
+     Commands:
+     • Movement: north, south, east, west, up, down
+     • Info: look, help, status
+     
      Send a command to begin your adventure!
 
 You: look
-Bot: 📍 Town Square
-     A bustling central plaza.
-     🚪 Exits: north, east
+Bot: You are in Town Square. A bustling central plaza.
 
 You: north
 Bot: Command queued. Waiting for next tick...
-     [After tick: 🚶 You moved north to North Street]
+```
+
+**Group Chat Behavior:**
+```
+[In Group Chat]
+You: auth Alice
+Bot: ✅ Authenticated as Alice!
+     
+     📧 Please send me a direct message to start playing.
+     Game commands only work in DMs to keep groups clean.
+
+[Bot sends you a DM with welcome message]
+
+You: (tries to use command in group) north
+Bot: 📧 Game commands only work in direct messages! 
+     Please message me directly to play.
 ```
 
 ## Configuration
@@ -148,6 +172,13 @@ export RUST_LOG=signal_bot=trace  # Maximum detail for bot
 - Each Signal phone number gets a unique session in SpacetimeDB
 - Sessions are cached in-memory for faster lookup
 - Session interface type is `"signal"`
+
+### Player Storage
+
+- Players are stored in SpacetimeDB's `player` table
+- Created when authenticating via `authenticate_player` reducer
+- Player data persists across bot restarts
+- Linked to phone number via session connection
 
 ### Command Processing
 

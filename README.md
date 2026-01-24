@@ -1,6 +1,6 @@
 # Rust Text Adventure Game Engine
 
-**Multiplayer Skills-Heavy Text Adventure** accessible via Terminal, Signal, and SMS.
+**Multiplayer Skills-Heavy Text Adventure** accessible via Terminal, Signal, and Discord.
 
 Built with Rust and SpacetimeDB, featuring a tick-based command queue system and multi-dimensional world.
 
@@ -8,7 +8,8 @@ Built with Rust and SpacetimeDB, featuring a tick-based command queue system and
 > - ✅ SpacetimeDB backend complete with Room table and 3D movement
 > - ✅ SDK client bindings generated (type-safe API)
 > - ✅ **Signal Messenger bot** (Phase 1 complete - see [SIGNAL_STATUS.md](src/signal_client/SIGNAL_STATUS.md))
-> - ⚠️ Terminal/SMS interfaces need completion
+> - ✅ **Discord bot** (Implementation complete - see [DISCORD_STATUS.md](src/discord_client/DISCORD_STATUS.md))
+> - ⚠️ Terminal client needs completion
 > - See [TODO.md](TODO.md) for full roadmap, [SDK_CLIENT_GUIDE.md](src/spacetimedb_client/SDK_CLIENT_GUIDE.md) for SDK setup
 
 ---
@@ -22,7 +23,7 @@ Built with Rust and SpacetimeDB, featuring a tick-based command queue system and
   - ⚠️ Terminal HTTP client (needs fix)
   - ⚠️ Terminal SDK client (demo complete, needs full integration)
   - ✅ **Signal Messenger** (webhook-based, Phase 1 complete)
-  - 🔲 SMS (planned)
+  - ✅ **Discord bot** (gateway-based, implementation complete)
 - **Tick-Based System:** 15-second strategic turns (3s for testing)
 - **Real-Time Sync:** SpacetimeDB provides ACID transactions and instant updates
 - **3D Movement:** Full x/y/z navigation within each dimension
@@ -43,7 +44,7 @@ Built with Rust and SpacetimeDB, featuring a tick-based command queue system and
 **Database Schema:**
 - `player` - Characters with 4D position (x, y, z, dimension)
 - `room` - 10 test rooms with 3D coordinates (100,100,100 center)
-- `session` - Active connections (Terminal/Signal/SMS)
+- `session` - Active connections (Terminal/Signal/Discord)
 - `queued_command` - Commands awaiting tick execution
 - `command_log` - Complete audit trail
 
@@ -63,7 +64,8 @@ rs_text_game_test/          # Main game project
 │   ├── bin/
 │   │   ├── terminal_client.rs  # HTTP-based client (needs fix)
 │   │   ├── sdk_client.rs       # SDK-based client (demo)
-│   │   └── signal_bot.rs       # Signal Messenger bot (✅ Phase 1 complete)
+│   │   ├── signal_bot.rs       # Signal Messenger bot (✅ Phase 1 complete)
+│   │   └── discord_bot.rs      # Discord bot (✅ implementation complete)
 │   ├── terminal_client/   # HTTP client modules
 │   │   ├── client.rs      # TerminalClient (needs query pattern fix)
 │   │   ├── auth.rs        # Authentication flow
@@ -86,6 +88,13 @@ rs_text_game_test/          # Main game project
 │   │   ├── SIGNAL_IMPLEMENTATION_SUMMARY.md
 │   │   ├── SIGNAL_INTEGRATION.md
 │   │   └── CONFIGURATION_GUIDE.md
+│   ├── discord_client/    # Discord bot modules (✅ complete)
+│   │   ├── bot.rs         # DiscordBot core implementation
+│   │   ├── message_handler.rs  # Message processing
+│   │   ├── formatter.rs   # Discord message formatting
+│   │   ├── mod.rs         # Module exports
+│   │   ├── DISCORD_STATUS.md  # Implementation status
+│   │   └── DISCORD_BOT_SETUP.md  # Setup guide
 ├── docs/                  # Architecture documentation
 │   ├── architecture-analysis.md
 │   ├── multiplayer-state-design.md
@@ -168,7 +177,21 @@ export SPACETIME_URL="http://localhost:3000"
 cargo run --features signal-client --bin signal_bot
 ```
 
-See [SDK_CLIENT_GUIDE.md](src/spacetimedb_client/SDK_CLIENT_GUIDE.md) for SDK details and [SIGNAL_BOT_SETUP.md](src/signal_client/SIGNAL_BOT_SETUP.md) for Signal bot setup.
+**Usage:** Authenticate with `auth YourName` in any chat, then the bot will DM you. All gameplay happens in DMs to keep group chats clean.
+
+**Discord Bot (✅ Implementation Complete):**
+```bash
+# Set environment variables
+export DISCORD_TOKEN="your-bot-token-here"  # From Discord Developer Portal
+export SPACETIME_URL="http://localhost:3000"
+
+# Run the bot
+cargo run --features discord-client --bin discord_bot
+```
+
+**Usage:** Authenticate with `@BotName auth YourName` in any channel, then the bot will DM you. All gameplay happens in DMs to keep channels clean.
+
+See [SDK_CLIENT_GUIDE.md](src/spacetimedb_client/SDK_CLIENT_GUIDE.md) for SDK details, [SIGNAL_BOT_SETUP.md](src/signal_client/SIGNAL_BOT_SETUP.md) for Signal bot setup, and [DISCORD_BOT_SETUP.md](src/discord_client/DISCORD_BOT_SETUP.md) for Discord bot setup.
 
 ### Test Multiplayer Backend
 
@@ -214,7 +237,7 @@ spacetime sql text-game -s local "SELECT * FROM command_log"
 
 **ACID Guarantees:** All state changes are transactional (no race conditions when two players take the same item)
 
-**Multi-Interface:** Same backend supports Terminal (rich text), Signal (notifications), and SMS (concise)
+**Multi-Interface:** Same backend supports Terminal (rich text), Signal (notifications), and Discord (bot commands)
 
 ---
 
@@ -231,7 +254,7 @@ spacetime sql text-game -s local "SELECT * FROM command_log"
 - ✅ SDK client bindings generated (type-safe API)
 - ✅ **Signal messenger integration** (Phase 1 complete, webhook-based)
 - ⚠️ Terminal interface integration (SDK demo complete, full connection pending)
-- ⬜ SMS gateway integration
+- ⬜ Discord bot integration
 
 See [TODO.md](TODO.md) for complete roadmap, [SDK_CLIENT_GUIDE.md](src/spacetimedb_client/SDK_CLIENT_GUIDE.md) for SDK details.
 

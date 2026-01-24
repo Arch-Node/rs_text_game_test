@@ -6,18 +6,27 @@ use super::bot::SignalBot;
 
 impl SignalBot {
     /// Handle an incoming Signal message
-    pub async fn handle_message(&self, sender: &str, text: &str) {
-        log::info!("Received message from {}: {}", sender, text);
+    pub async fn handle_message(&self, sender: &str, text: &str, is_group: bool) {
+        log::info!("Received message from {} (group={}): {}", sender, is_group, text);
         
         let text = text.trim();
         
         // Check if user is authenticated
         if !self.is_authenticated(sender).await {
-            self.handle_unauthenticated(sender, text).await;
+            self.handle_unauthenticated(sender, text, is_group).await;
             return;
         }
         
-        // Handle authenticated commands
+        // If authenticated but in a group, reject game commands
+        if is_group {
+            let _ = self.send_message(
+                sender,
+                "📧 Game commands only work in direct messages! Please message me directly to play."
+            ).await;
+            return;
+        }
+        
+        // Handle authenticated commands (only in DMs)
         if let Err(e) = self.handle_game_command(sender, text).await {
             log::error!("Error handling command: {}", e);
             // Error dropped here before await
@@ -26,26 +35,72 @@ impl SignalBot {
     }
     
     /// Handle messages from unauthenticated users
-    async fn handle_unauthenticated(&self, sender: &str, text: &str) {
-        // First message should be their character name
-        if text.is_empty() || text.len() > 20 {
+    async fn handle_unauthenticated(&self, sender: &str, text: &str, is_group: bool) {
+        // Only allow authentication command
+        if !text.to_lowercase().starts_with("auth ") && text.to_lowercase() != "auth" {
+            let msg = if is_group {
+                "Please authenticate with: auth YourName"
+            } else {
+                "Welcome to Layered Realms! Please authenticate with: auth YourName"
+            };
+            let _ = self.send_message(sender, msg).await;
+            return;
+        }
+        
+        // Extract player name
+        let player_name = if text.to_lowercase() == "auth" {
+            ""
+        } else {
+            text[4..].trim()
+        };
+        
+        if player_name.is_empty() || player_name.len() > 20 {
             let _ = self.send_message(
                 sender,
-                "Welcome to Layered Realms! Please send your character name (1-20 characters):"
+                "Please provide a character name (1-20 characters): auth YourName"
             ).await;
             return;
         }
         
         // Authenticate with the provided name
-        match self.authenticate_player(sender, text).await {
+        match self.authenticate_player(sender, player_name).await {
             Ok(_) => {
-                let welcome = format!(
-                    "Welcome, {}! You are in Town Square.\n\n\
-                    Commands: north, south, east, west, up, down, look, help\n\n\
-                    Send a command to begin your adventure!",
-                    text
-                );
-                let _ = self.send_message(sender, &welcome).await;
+                if is_group {
+                    // Authenticated in group - send DM instruction
+                    let _ = self.send_message(
+                        sender,
+                        &format!(
+                            "✅ Authenticated as {}!\n\n\
+                            📧 Please send me a direct message to start playing. \
+                            Game commands only work in DMs to keep groups clean.",
+                            player_name
+                        )
+                    ).await;
+                    
+                    // Try to send a DM with welcome
+                    let welcome = format!(
+                        "Welcome, {}! 🎮\n\n\
+                        You are in Town Square.\n\n\
+                        Commands:\n\
+                        • Movement: north, south, east, west, up, down\n\
+                        • Info: look, help, status\n\n\
+                        Send a command to begin your adventure!",
+                        player_name
+                    );
+                    let _ = self.send_message(sender, &welcome).await;
+                } else {
+                    // Authenticated in DM - send full welcome
+                    let welcome = format!(
+                        "Welcome, {}! 🎮\n\n\
+                        You are in Town Square.\n\n\
+                        Commands:\n\
+                        • Movement: north, south, east, west, up, down\n\
+                        • Info: look, help, status\n\n\
+                        Send a command to begin your adventure!",
+                        player_name
+                    );
+                    let _ = self.send_message(sender, &welcome).await;
+                }
             }
             Err(e) => {
                 log::error!("Authentication failed: {}", e);
