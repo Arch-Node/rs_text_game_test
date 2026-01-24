@@ -7,7 +7,7 @@ Built with Rust and SpacetimeDB, featuring a tick-based command queue system and
 > **🚧 Development Status:** 
 > - ✅ SpacetimeDB backend complete with Room table and 3D movement
 > - ✅ SDK client bindings generated (type-safe API)
-> - ✅ **Signal Messenger bot** (Phase 1 complete - see [SIGNAL_STATUS.md](src/signal_client/SIGNAL_STATUS.md))
+> - ✅ **Signal Messenger bot** (Phase 1 complete - see [Signal README](src/signal_client/README.md))
 > - ✅ **Discord bot** (Implementation complete - see [DISCORD_STATUS.md](src/discord_client/DISCORD_STATUS.md))
 > - ⚠️ Terminal client needs completion
 > - See [TODO.md](TODO.md) for full roadmap, [SDK_CLIENT_GUIDE.md](src/spacetimedb_client/SDK_CLIENT_GUIDE.md) for SDK setup
@@ -83,11 +83,8 @@ rs_text_game_test/          # Main game project
 │   │   ├── message_handler.rs  # Message processing
 │   │   ├── formatter.rs   # Signal message formatting
 │   │   ├── mod.rs         # Module exports
-│   │   ├── SIGNAL_STATUS.md  # Integration status
-│   │   ├── SIGNAL_BOT_SETUP.md  # Setup guide
-│   │   ├── SIGNAL_IMPLEMENTATION_SUMMARY.md
-│   │   ├── SIGNAL_INTEGRATION.md
-│   │   └── CONFIGURATION_GUIDE.md
+│   │   ├── README.md      # Overview and status
+│   │   └── SIGNAL_BOT_SETUP.md  # Setup guide
 │   ├── discord_client/    # Discord bot modules (✅ complete)
 │   │   ├── bot.rs         # DiscordBot core implementation
 │   │   ├── message_handler.rs  # Message processing

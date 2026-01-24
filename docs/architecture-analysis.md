@@ -195,7 +195,7 @@ pub enum OutputMode {
 - ✅ Buffer system is good foundation
 - ⚠️ Need per-session output buffering
 - ⚠️ Need message routing (who sees what)
-- ⚠️ Need message formatting per interface type (Terminal/Signal/SMS)
+- ⚠️ Need message formatting per interface type (Terminal/Signal/Discord)
 - ⚠️ Need event broadcasting (room-based, proximity-based, global)
 - ⚠️ Need message types/categories (narrative, system, chat, combat, error)
 

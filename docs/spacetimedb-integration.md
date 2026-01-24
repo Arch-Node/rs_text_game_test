@@ -38,14 +38,14 @@ SpacetimeDB is a relational database + server combined into one, designed specif
 
 ### Current Stub Architecture:
 ```
-Terminal/Signal/SMS → Rust Server → mpsc channels → Tick System → Broadcast Events
+Terminal/Signal/Discord → Rust Server → mpsc channels → Tick System → Broadcast Events
                                    ↓
                               (No persistence yet)
 ```
 
 ### SpacetimeDB Architecture (Option A - Full Integration):
 ```
-Terminal/Signal/SMS → SpacetimeDB Module (WASM) → Tables + Subscriptions
+Terminal/Signal/Discord → SpacetimeDB Module (WASM) → Tables + Subscriptions
                                  ↓
                            Rust Reducers:
                            - submit_command
@@ -57,7 +57,7 @@ Terminal/Signal/SMS → SpacetimeDB Module (WASM) → Tables + Subscriptions
 
 ### Hybrid Architecture (Option B - Adapter Layer):
 ```
-Terminal/Signal/SMS → Rust Adapter Layer → SpacetimeDB (persistence + pub/sub)
+Terminal/Signal/Discord → Rust Adapter Layer → SpacetimeDB (persistence + pub/sub)
                               ↓
                       Our tick system (as designed)
                               ↓
@@ -248,15 +248,15 @@ After gameplay is working:
 
 5. **Integrate with existing terminal interface** (prove concept)
 
-6. **Add Signal/SMS adapters** once persistence works
+6. **Add Signal/Discord adapters** once persistence works
 
 ## Key Questions to Answer
 
 - [ ] How do we schedule tick execution in SpacetimeDB? (Reducer cron? External trigger?)
 - [ ] Can we do "instant" commands that don't create transactions?
-- [ ] How do we handle different interfaces (Terminal vs Signal vs SMS) connecting?
+- [ ] How do we handle different interfaces (Terminal vs Signal vs Discord) connecting?
 - [ ] What's the best way to represent ConnectionIdentifiers in SpacetimeDB?
-- [ ] Do we need client SDK or can we use HTTP API for Signal/SMS bots?
+- [ ] Do we need client SDK or can we use HTTP API for Signal/Discord bots?
 
 ## Resources
 

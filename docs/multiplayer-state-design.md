@@ -186,7 +186,7 @@ pub struct Session {
 pub enum InterfaceType {
     Terminal,
     Signal,
-    SMS,
+    Discord,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -810,7 +810,7 @@ Server: "Command queued for next tick."
 - **Production (15 seconds):** 
   - Gives players time to think and plan
   - Reduces server load
-  - Better for SMS interface (accounts for message latency)
+  - Better for all interfaces (accounts for varying message latency)
   - Encourages strategic, thoughtful gameplay
   - Perfect for skills-based challenges
   - Allows time for coordination between players
@@ -833,7 +833,7 @@ let tick_config = if cfg!(debug_assertions) {
 
 **Advantages of 15-Second Ticks:**
 - ✅ Players can queue multiple actions mentally
-- ✅ Works great for text/SMS with network delays
+- ✅ Works great across all interfaces (Terminal/Signal/Discord) with varying network delays
 - ✅ Encourages planning over twitch reflexes
 - ✅ Fits skills-heavy, not combat-heavy design
 - ✅ Allows for complex skill checks and resolution
