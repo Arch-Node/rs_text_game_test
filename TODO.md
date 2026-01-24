@@ -22,22 +22,178 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [x] Break down implementation into phases
 
 #### ⬜ Task 1: Design Multiplayer Architecture
-- [ ] Define authoritative GameState for multiple players
-- [ ] Identify shared vs per-player state
-- [ ] Add player/session identifiers to core models
-- [ ] Define inbound command envelope (player/session, input, metadata)
-- [ ] Define outbound response envelope (messages, errors, events)
-- [ ] Standardize command routing for all interfaces
-- [ ] Map output formats for terminal, Signal, and SMS
-- [ ] Create session interface for terminal, Signal, and SMS
-- [ ] Decide how sessions map to players (account vs character)
-- [ ] Plan connection lifecycle (connect, idle, disconnect, reconnect)
-- [ ] Design server-client architecture with shared game state
-- [ ] Decide: turn-based vs real-time mechanics
-- [ ] Plan state synchronization strategy
-- [ ] Design message broadcasting system
-- [ ] Plan player sessions/authentication
-- [ ] Plan world tick and update cadence
+
+**Overview:** Define the complete architectural design for transitioning from single-player to multiplayer, including state management, communication protocols, session handling, and synchronization strategies.
+
+##### 1.1 Analyze Current Single-Player Architecture
+- [ ] Document current `GameState` structure and lifecycle
+- [ ] Map all current commands and their state mutations
+- [ ] Identify which parts of `World` are static vs dynamic
+- [ ] Review current `Player` struct and what needs to become per-session
+- [ ] List all current side effects (room changes, item pickups, etc.)
+- [ ] Document current output/messaging flow
+
+##### 1.2 Define Multiplayer State Model
+- [ ] **Shared World State:**
+  - [ ] Design `WorldState` struct containing rooms, NPCs, items, global events
+  - [ ] Identify mutable shared state (room occupancy, NPC positions, world items)
+  - [ ] Determine which state changes are transactional vs eventual
+  - [ ] Plan for world state versioning/snapshots
+- [ ] **Per-Player State:**
+  - [ ] Define `PlayerState` struct (position, inventory, stats, skills, quests)
+  - [ ] Separate player-specific views from shared world view
+  - [ ] Design player visibility rules (what players can see of each other)
+- [ ] **Session Management:**
+  - [ ] Design `Session` struct linking connection to player identity
+  - [ ] Plan session lifecycle (create, authenticate, resume, timeout, close)
+  - [ ] Decide on session storage (in-memory, Redis, database)
+  - [ ] Define session metadata (connection time, last activity, interface type)
+
+##### 1.3 Design Command/Message Protocol
+- [ ] **Inbound Command Envelope:**
+  - [ ] Define `CommandRequest` struct:
+    ```rust
+    struct CommandRequest {
+        session_id: SessionId,
+        player_id: PlayerId,
+        command: String,
+        interface: InterfaceType,  // Terminal, Signal, SMS
+        timestamp: DateTime,
+        metadata: HashMap<String, String>
+    }
+    ```
+  - [ ] Design command validation and sanitization
+  - [ ] Plan rate limiting per session/player
+  - [ ] Define command priority levels (immediate vs queued)
+- [ ] **Outbound Response Envelope:**
+  - [ ] Define `CommandResponse` struct:
+    ```rust
+    struct CommandResponse {
+        session_id: SessionId,
+        messages: Vec<Message>,
+        events: Vec<GameEvent>,
+        errors: Option<Vec<Error>>,
+        state_delta: Option<StateDelta>
+    }
+    ```
+  - [ ] Design message types (narrative, system, chat, combat, error)
+  - [ ] Define formatting hints for different interfaces
+  - [ ] Plan message batching and chunking strategies
+- [ ] **Event Broadcasting:**
+  - [ ] Define `GameEvent` enum (player_moved, player_joined, player_left, item_taken, npc_dialogue, world_update)
+  - [ ] Design event filtering (who needs to see what)
+  - [ ] Plan event delivery guarantees (best-effort vs guaranteed)
+  - [ ] Design event subscription system (room-based, proximity-based, global)
+
+##### 1.4 Architecture Pattern Selection
+- [ ] **Choose Core Pattern:**
+  - [ ] Option A: Actor model (one actor per player + world actor)
+  - [ ] Option B: Event-driven (command → event → state update → broadcast)
+  - [ ] Option C: ECS (Entity Component System) for game objects
+  - [ ] Document pros/cons of chosen pattern
+- [ ] **Concurrency Strategy:**
+  - [ ] Decide on locking strategy (RwLock on world state, per-player locks)
+  - [ ] Plan for lock-free data structures where possible
+  - [ ] Consider message passing vs shared memory
+  - [ ] Design deadlock prevention strategy
+- [ ] **Turn-Based vs Real-Time:**
+  - [ ] Decision: Hybrid approach (continuous for exploration, turn-based for combat/challenges)
+  - [ ] Define tick rate for world updates (1 second, 5 seconds, 10 seconds?)
+  - [ ] Plan command queuing and execution order
+  - [ ] Design action interruption and priority system
+
+##### 1.5 Session Abstraction Layer
+- [ ] **Define Session Interface:**
+  ```rust
+  trait SessionInterface {
+      fn send_message(&self, msg: Message) -> Result<()>;
+      fn send_prompt(&self) -> Result<()>;
+      fn get_interface_type(&self) -> InterfaceType;
+      fn get_format_limits(&self) -> FormatLimits;  // SMS char limit, etc.
+  }
+  ```
+- [ ] **Map Interface Types:**
+  - [ ] Terminal: full formatting, color, real-time
+  - [ ] Signal: moderate length, async, notification support
+  - [ ] SMS: strict char limits, highest latency, most concise
+- [ ] **Account vs Character Mapping:**
+  - [ ] Decision: One account can have multiple characters
+  - [ ] Design character selection flow per interface
+  - [ ] Plan character switching without disconnecting
+  - [ ] Handle multiple sessions for same account (different devices)
+
+##### 1.6 State Synchronization Strategy
+- [ ] **Visibility and Awareness:**
+  - [ ] Define "location awareness" (players in same room see each other)
+  - [ ] Design proximity-based event filtering
+  - [ ] Plan for "global" events (server announcements, world events)
+  - [ ] Handle delayed sync for SMS users (summary-based updates)
+- [ ] **State Change Propagation:**
+  - [ ] Design delta-based updates (only send what changed)
+  - [ ] Plan full state refresh scenarios (reconnect, teleport)
+  - [ ] Handle optimistic updates with rollback
+  - [ ] Design conflict resolution (two players take same item)
+- [ ] **Update Cadence:**
+  - [ ] World tick: Every 5-10 seconds for passive events
+  - [ ] Immediate: Player commands affecting others
+  - [ ] Batched: Periodic summaries for SMS interface
+  - [ ] Event-driven: Combat, dialogue, skill checks
+
+##### 1.7 Authentication and Identity
+- [ ] **Basic Auth Strategy:**
+  - [ ] Terminal: username/password or token-based
+  - [ ] Signal: phone number as identity (pre-registered)
+  - [ ] SMS: phone number with PIN or initial registration flow
+- [ ] **Security Considerations:**
+  - [ ] Plan password hashing (argon2, bcrypt)
+  - [ ] Design token/session key generation
+  - [ ] Plan for session hijacking prevention
+  - [ ] Define admin/moderator authentication
+- [ ] **Account System:**
+  - [ ] Design user registration flow per interface
+  - [ ] Plan account recovery mechanisms
+  - [ ] Handle guest/anonymous sessions (if supported)
+
+##### 1.8 Error Handling and Resilience
+- [ ] **Error Categories:**
+  - [ ] Command parsing errors
+  - [ ] Authentication/authorization errors
+  - [ ] State mutation errors (invalid action, race condition)
+  - [ ] Network/interface errors
+  - [ ] Server/world errors
+- [ ] **Graceful Degradation:**
+  - [ ] Handle partial service outages (SMS down, database slow)
+  - [ ] Plan for read-only mode during maintenance
+  - [ ] Design queue backpressure handling
+  - [ ] Define timeout policies per interface
+
+##### 1.9 Logging and Observability
+- [ ] **Structured Logging:**
+  - [ ] Define log levels: TRACE, DEBUG, INFO, WARN, ERROR
+  - [ ] Required fields: timestamp, session_id, player_id, command, duration
+  - [ ] Optional fields: interface_type, room_id, error_details
+- [ ] **Metrics to Track:**
+  - [ ] Active sessions per interface
+  - [ ] Commands per second
+  - [ ] Average command execution time
+  - [ ] State synchronization lag
+  - [ ] Error rates by category
+- [ ] **Tracing:**
+  - [ ] Plan distributed tracing for async flows
+  - [ ] Design request correlation IDs
+  - [ ] Trace command from receipt → execution → broadcast
+
+##### 1.10 Create Architecture Documentation
+- [ ] Write architecture decision records (ADRs) for key choices
+- [ ] Create sequence diagrams for:
+  - [ ] Player connection and authentication
+  - [ ] Command processing flow
+  - [ ] Event broadcasting
+  - [ ] State synchronization
+- [ ] Document data flow diagrams
+- [ ] Create component interaction diagrams
+- [ ] Write API specifications for internal modules
+- [ ] Define coding standards and patterns to follow
 
 #### ⬜ Task 2: Add Networking Dependencies
 - [ ] Add `tokio` for async runtime
