@@ -3,22 +3,25 @@
 // Terminal Client for Multiplayer Text Adventure
 //
 // This is a standalone terminal application that connects to the SpacetimeDB
-// backend and allows players to interact with the game.
+// backend via WebSocket SDK and allows players to interact with the game.
 
 use rust_game_test::terminal_client::{
-    TerminalClient, DisplayFormatter, InputHandler,
+    DisplayFormatter, InputHandler,
     auth::{self, AuthState},
-    client::{SpacetimeConfig, CommandResult},
+    client::{SpacetimeConfig, TerminalClient, CommandResult},
 };
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logging
+    env_logger::init();
+    
     // Display welcome message
     auth::display_welcome();
     
-    // Create SpacetimeDB client
+    // Create SpacetimeDB client with WebSocket connection
     let config = SpacetimeConfig::default();
-    let mut client = TerminalClient::new(config);
+    let mut client = TerminalClient::new(config).await?;
     
     // Generate connection ID
     let connection_id = auth::generate_connection_id();
@@ -122,6 +125,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     &result.message,
                     result.is_queued,
                 ));
+                
+                // Auto-execute tick and wait for result
+                println!("⏰ Executing tick...");
+                match client.execute_tick_and_wait().await {
+                    Ok(Some(result_msg)) => {
+                        println!("📜 {}\n", result_msg);
+                    }
+                    Ok(None) => {
+                        println!("   No result received (command may still be processing)\n");
+                    }
+                    Err(e) => {
+                        eprintln!("{}\n", DisplayFormatter::format_error(&format!(
+                            "Tick failed: {}", e
+                        )));
+                    }
+                }
             }
             Err(e) => {
                 eprintln!("{}\n", DisplayFormatter::format_error(&format!(

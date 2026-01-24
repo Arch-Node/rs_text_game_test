@@ -40,13 +40,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("DISCORD_TOKEN environment variable must be set");
     
     let spacetime_url = env::var("SPACETIME_URL")
-        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+        .unwrap_or_else(|_| "ws://localhost:3000".to_string());
     
     info!("Starting Discord bot...");
-    info!("SpacetimeDB URL: {}", spacetime_url);
+    info!("SpacetimeDB (WebSocket): {}", spacetime_url);
     
-    // Create bot instance
-    let bot = Arc::new(DiscordBot::new(spacetime_url));
+    // Create bot instance with WebSocket SDK (now async)
+    let bot = Arc::new(DiscordBot::new(spacetime_url).await?);
     
     // Start tick processor in background
     let tick_bot = bot.clone();

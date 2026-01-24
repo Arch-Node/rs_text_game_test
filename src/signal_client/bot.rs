@@ -1,6 +1,6 @@
 // signal_client/bot.rs
 //
-// Core Signal bot implementation
+// Core Signal bot implementation using WebSocket SDK for SpacetimeDB
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -8,6 +8,17 @@ use tokio::sync::RwLock;
 use reqwest::Client;
 use serde_json::json;
 use anyhow::Result;
+use spacetimedb_sdk::{DbContext, Table};
+use tokio::time::{sleep, Duration};
+
+use crate::spacetimedb_client::{
+    connect_session, authenticate_player, submit_command, execute_tick,
+    CommandLog, CommandLogTableAccess, PlayerTableAccess, 
+    SessionTableAccess, RoomTableAccess, DbConnection,
+};
+use crate::sdk_utils::create_connection_with_processor;
+use crate::event_broadcaster::{setup_event_monitoring, format_event, GameEvent};
+use tokio::sync::mpsc;
 
 /// Signal bot that connects Signal Messenger to SpacetimeDB
 #[derive(Clone)]
@@ -18,10 +29,10 @@ pub struct SignalBot {
     /// Bot's registered Signal phone number
     bot_number: String,
     
-    /// SpacetimeDB base URL (e.g., http://localhost:3000)
-    spacetime_url: String,
+    /// SpacetimeDB WebSocket connection
+    conn: Arc<DbConnection>,
     
-    /// HTTP client for API calls
+    /// HTTP client for Signal API calls only
     http_client: Client,
     
     /// Session cache: phone number → session_id
@@ -29,23 +40,57 @@ pub struct SignalBot {
     
     /// Player name cache: phone number → player name
     player_cache: Arc<RwLock<HashMap<String, String>>>,
+    
+    /// Track latest command results per session
+    command_results: Arc<RwLock<HashMap<u64, String>>>,
+    
+    /// Event receiver for multiplayer notifications (per player)
+    event_channels: Arc<RwLock<HashMap<String, mpsc::Sender<GameEvent>>>>,
 }
 
 impl SignalBot {
-    /// Create a new Signal bot
-    pub fn new(
+    /// Create a new Signal bot with WebSocket SDK connection
+    pub async fn new(
         signal_api_url: impl Into<String>,
         spacetime_url: impl Into<String>,
         bot_number: impl Into<String>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        log::info!("🔌 Connecting to SpacetimeDB via WebSocket...");
+        
+        // Track command results
+        let command_results = Arc::new(RwLock::new(HashMap::new()));
+        let command_results_clone = command_results.clone();
+        
+        // Create connection with background processor
+        let conn: Arc<crate::spacetimedb_client::DbConnection> = create_connection_with_processor(&spacetime_url.into(), "text-game")
+            .await
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        
+        // Set up callback for command results - note: these fire in background processor
+        conn.db().command_log().on_insert(move |_ctx, log| {
+            if let Some(ref result) = log.result {
+                // Use player_id to track results  
+                let player_id = log.player_id;
+                // Use try_write to avoid blocking in callback
+                if let Ok(mut results) = command_results_clone.try_write() {
+                    results.insert(player_id, result.clone());
+                    log::debug!("📥 Command result for player {}: {}", player_id, result);
+                }
+            }
+        });
+        
+        log::info!("   ✅ Connected with real-time subscriptions");
+        
+        Ok(Self {
             signal_api_url: signal_api_url.into(),
             bot_number: bot_number.into(),
-            spacetime_url: spacetime_url.into(),
+            conn,
             http_client: Client::new(),
+            event_channels: Arc::new(RwLock::new(HashMap::new())),
             session_cache: Arc::new(RwLock::new(HashMap::new())),
             player_cache: Arc::new(RwLock::new(HashMap::new())),
-        }
+            command_results,
+        })
     }
     
     /// Send a message via Signal
@@ -85,40 +130,35 @@ impl SignalBot {
             }
         }
         
-        // Create new session via SpacetimeDB
+        // Create new session via SpacetimeDB SDK
         log::info!("Creating new session for {}", phone);
         
-        let url = format!("{}/database/text-game/call", self.spacetime_url);
-        let payload = json!({
-            "fn": "connect_session",
-            "args": [
-                {"type": "String", "value": "signal"},
-                {"type": "String", "value": phone},
-            ]
-        });
+        let reducers = self.conn.reducers();
+        reducers.connect_session("signal".to_string(), phone.to_string())?;
         
-        let response = self.http_client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await?;
+        // Wait for session to be created
+        sleep(Duration::from_secs(1)).await;
         
-        if !response.status().is_success() {
-            log::error!("Failed to create session: {:?}", response.text().await?);
-            return Err(anyhow::anyhow!("Failed to create session"));
+        // Query session table to find the session ID
+        let sessions: Vec<_> = self.conn.db().session()
+            .iter()
+            .filter(|s| s.connection_id == phone)
+            .collect();
+        
+        if let Some(session) = sessions.first() {
+            let session_id = session.id;
+            
+            // Cache it
+            {
+                let mut cache = self.session_cache.write().await;
+                cache.insert(phone.to_string(), session_id);
+            }
+            
+            log::info!("✅ Session {} created for {}", session_id, phone);
+            Ok(session_id)
+        } else {
+            Err(anyhow::anyhow!("Failed to create session"))
         }
-        
-        // Query to get the session ID (would need to query the session table)
-        // For now, return a placeholder - this needs proper implementation
-        let session_id = 0; // TODO: Query session table by connection_id
-        
-        // Cache it
-        {
-            let mut cache = self.session_cache.write().await;
-            cache.insert(phone.to_string(), session_id);
-        }
-        
-        Ok(session_id)
     }
     
     /// Check if player is authenticated
@@ -136,25 +176,11 @@ impl SignalBot {
         
         log::info!("Authenticating player '{}' for {}", player_name, phone);
         
-        let url = format!("{}/database/text-game/call", self.spacetime_url);
-        let payload = json!({
-            "fn": "authenticate_player",
-            "args": [
-                {"type": "U64", "value": session_id},
-                {"type": "String", "value": player_name},
-            ]
-        });
+        let reducers = self.conn.reducers();
+        reducers.authenticate_player(session_id, player_name.to_string())?;
         
-        let response = self.http_client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await?;
-        
-        if !response.status().is_success() {
-            log::error!("Failed to authenticate player: {:?}", response.text().await?);
-            return Err(anyhow::anyhow!("Failed to authenticate player"));
-        }
+        // Wait for authentication
+        sleep(Duration::from_secs(1)).await;
         
         // Cache player name
         {
@@ -162,36 +188,55 @@ impl SignalBot {
             cache.insert(phone.to_string(), player_name.to_string());
         }
         
+        // Set up multiplayer event monitoring for this player
+        let (event_tx, mut event_rx) = mpsc::channel(100);
+        setup_event_monitoring(self.conn.clone(), player_name.to_string(), event_tx.clone());
+        
+        // Store the sender channel
+        {
+            let mut channels = self.event_channels.write().await;
+            channels.insert(player_name.to_string(), event_tx);
+        }
+        
+        // Spawn task to forward events to Signal
+        let bot_clone = self.clone();
+        let phone_clone = phone.to_string();
+        let player_name_clone = player_name.to_string();
+        tokio::spawn(async move {
+            while let Some(event) = event_rx.recv().await {
+                // Get current player position
+                let current_pos = bot_clone.get_player_position(&player_name_clone).await;
+                
+                if let Some(message) = format_event(&event, current_pos) {
+                    let _ = bot_clone.send_message(&phone_clone, &message).await;
+                }
+            }
+        });
+        
+        log::info!("✅ Player '{}' authenticated for {} with multiplayer events", player_name, phone);
         Ok(())
     }
     
     /// Submit a command to SpacetimeDB
     pub async fn submit_command(
         &self,
-        session_id: u64,
+        phone: &str,
         command: &str,
     ) -> Result<()> {
-        log::info!("Submitting command for session {}: {}", session_id, command);
+        let session_id = self.get_or_create_session(phone).await?;
         
-        let url = format!("{}/database/text-game/call", self.spacetime_url);
-        let payload = json!({
-            "fn": "submit_command",
-            "args": [
-                {"type": "String", "value": command},
-            ]
-        });
+        log::info!("Submitting command for {}: {}", phone, command);
         
-        let response = self.http_client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await?;
-        
-        if !response.status().is_success() {
-            log::error!("Failed to submit command: {:?}", response.text().await?);
-            return Err(anyhow::anyhow!("Failed to submit command"));
+        // Clear previous result for this session
+        {
+            let mut results = self.command_results.write().await;
+            results.remove(&session_id);
         }
         
+        let reducers = self.conn.reducers();
+        reducers.submit_command(command.to_string())?;
+        
+        log::debug!("✅ Command submitted");
         Ok(())
     }
     
@@ -199,125 +244,110 @@ impl SignalBot {
     pub async fn execute_tick(&self) -> Result<()> {
         log::debug!("Executing tick");
         
-        let url = format!("{}/database/text-game/call", self.spacetime_url);
-        let payload = json!({
-            "fn": "execute_tick",
-            "args": []
-        });
-        
-        let response = self.http_client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await?;
-        
-        if !response.status().is_success() {
-            log::error!("Failed to execute tick: {:?}", response.text().await?);
-            return Err(anyhow::anyhow!("Failed to execute tick"));
-        }
+        let reducers = self.conn.reducers();
+        reducers.execute_tick()?;
         
         Ok(())
     }
     
-    /// Get recent command results for a player
-    /// Returns (success, command, error_message_if_any)
-    pub async fn get_command_results(&self, phone: &str, limit: usize) -> Result<Vec<(bool, String, Option<String>)>> {
+    /// Get command result for a phone number/session
+    pub async fn get_command_result(&self, phone: &str) -> Result<Option<String>> {
         let session_id = self.get_or_create_session(phone).await?;
         
-        // Query command_log for recent commands
-        let url = format!("{}/database/sql/text-game", self.spacetime_url);
-        let query = format!(
-            "SELECT success, command, error_message FROM command_log WHERE player_id IN (SELECT player_id FROM session WHERE id = {}) ORDER BY executed_at DESC LIMIT {}",
-            session_id, limit
-        );
-        
-        let response = self.http_client
-            .post(&url)
-            .body(query)
-            .send()
-            .await?;
-        
-        if !response.status().is_success() {
-            return Err(anyhow::anyhow!("Failed to query command log"));
-        }
-        
-        let results: serde_json::Value = response.json().await?;
-        let mut command_results = Vec::new();
-        
-        if let Some(rows) = results.as_array() {
-            for row in rows {
-                let success = row["success"].as_bool().unwrap_or(false);
-                let command = row["command"].as_str().unwrap_or("").to_string();
-                let error_message = row["error_message"].as_str().map(|s| s.to_string());
-                command_results.push((success, command, error_message));
-            }
-        }
-        
-        Ok(command_results)
+        // Check if we have a result for this session
+        let results = self.command_results.read().await;
+        Ok(results.get(&session_id).cloned())
     }
     
-    /// Get player's current room description
+    /// Get player's current room description from local cache
     pub async fn get_current_room(&self, phone: &str) -> Result<Option<String>> {
         let session_id = self.get_or_create_session(phone).await?;
         
-        // Query player position
-        let url = format!("{}/database/sql/text-game", self.spacetime_url);
-        let query = format!(
-            "SELECT p.position_x, p.position_y, p.position_z, p.dimension FROM player p JOIN session s ON s.player_id = p.id WHERE s.id = {}",
-            session_id
-        );
+        // Find player through session
+        let sessions: Vec<_> = self.conn.db().session()
+            .iter()
+            .filter(|s| s.id == session_id)
+            .collect();
         
-        let response = self.http_client
-            .post(&url)
-            .body(query)
-            .send()
-            .await?;
+        let player_id = sessions.first()
+            .and_then(|s| s.player_id)
+            .ok_or_else(|| anyhow::anyhow!("No player found for session"))?;
         
-        if !response.status().is_success() {
-            return Ok(None);
-        }
+        // Get player position
+        let players: Vec<_> = self.conn.db().player()
+            .iter()
+            .filter(|p| p.id == player_id)
+            .collect();
         
-        let results: serde_json::Value = response.json().await?;
-        
-        if let Some(rows) = results.as_array() {
-            if let Some(row) = rows.first() {
-                let x = row["position_x"].as_i64().unwrap_or(100);
-                let y = row["position_y"].as_i64().unwrap_or(100);
-                let z = row["position_z"].as_i64().unwrap_or(100);
-                let dimension = row["dimension"].as_str().unwrap_or("material");
-                
-                // Query room at this position
-                let room_query = format!(
-                    "SELECT name, description FROM room WHERE position_x = {} AND position_y = {} AND position_z = {} AND dimension = '{}'",
-                    x, y, z, dimension
-                );
-                
-                let room_response = self.http_client
-                    .post(&url)
-                    .body(room_query)
-                    .send()
-                    .await?;
-                
-                if room_response.status().is_success() {
-                    let room_results: serde_json::Value = room_response.json().await?;
-                    if let Some(room_rows) = room_results.as_array() {
-                        if let Some(room) = room_rows.first() {
-                            let name = room["name"].as_str().unwrap_or("Unknown");
-                            let description = room["description"].as_str().unwrap_or("");
-                            return Ok(Some(format!("📍 {}\n\n{}", name, description)));
-                        }
-                    }
-                }
+        if let Some(player) = players.first() {
+            // Find room at player's position
+            let rooms: Vec<_> = self.conn.db().room()
+                .iter()
+                .filter(|r| {
+                    r.position_x == player.position_x
+                        && r.position_y == player.position_y
+                        && r.position_z == player.position_z
+                        && r.dimension == player.dimension
+                })
+                .collect();
+            
+            if let Some(room) = rooms.first() {
+                return Ok(Some(format!("📍 {}\n\n{}", room.name, room.description)));
             }
         }
         
         Ok(None)
     }
     
+    /// Get player info from local cache
+    pub async fn get_player_info(&self, phone: &str) -> Result<Option<(String, i32, i32, i32, String)>> {
+        let session_id = self.get_or_create_session(phone).await?;
+        
+        // Find player through session
+        let sessions: Vec<_> = self.conn.db().session()
+            .iter()
+            .filter(|s| s.id == session_id)
+            .collect();
+        
+        let player_id = sessions.first()
+            .and_then(|s| s.player_id)
+            .ok_or_else(|| anyhow::anyhow!("No player found for session"))?;
+        
+        // Get player info
+        let players: Vec<_> = self.conn.db().player()
+            .iter()
+            .filter(|p| p.id == player_id)
+            .collect();
+        
+        if let Some(player) = players.first() {
+            Ok(Some((
+                player.name.clone(),
+                player.position_x,
+                player.position_y,
+                player.position_z,
+                player.dimension.clone(),
+            )))
+        } else {
+            Ok(None)
+        }
+    }
+    
+    /// Get player position by player name (for event filtering)
+    async fn get_player_position(&self, player_name: &str) -> Option<(i32, i32, i32, String)> {
+        let players: Vec<_> = self.conn.db().player()
+            .iter()
+            .filter(|p| p.name == player_name)
+            .collect();
+        
+        players.first().map(|p| {
+            (p.position_x, p.position_y, p.position_z, p.dimension.clone())
+        })
+    }
+    
     /// Run the bot (webhook server + background tick processor)
     pub async fn run(self) -> Result<()> {
-        log::info!("Starting Signal bot on {} → SpacetimeDB at {}",
-            self.bot_number, self.spacetime_url);
+        log::info!("Starting Signal bot on {} → SpacetimeDB (WebSocket)",
+            self.bot_number);
         
         // Clone for background task
         let bot_clone = self.clone();

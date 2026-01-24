@@ -55,18 +55,18 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ## Phase Overview
 
-### Phase 1: Core Infrastructure (85% Complete)
-**Status:** SpacetimeDB backend operational with WebSocket SDK. Command results now include room descriptions. SDK tests working with real-time subscriptions. Need to migrate all clients from HTTP to WebSocket SDK.
+### Phase 1: Core Infrastructure (100% Complete)
+**Status:** SpacetimeDB backend operational with WebSocket SDK. All three clients (Terminal, Signal, Discord) migrated to WebSocket SDK with real-time subscriptions. Cross-client event broadcasting implemented for multiplayer awareness. Command results include room descriptions. SDK tests passing with instant callback delivery.
 
 **Critical Path:**
 1. ✅ ~~Fix terminal client query endpoint bug~~ → Migrate to WebSocket SDK instead
 2. ✅ Implement tick result feedback → CommandLog.result field stores room descriptions
 3. ✅ SDK subscriptions working → Table callbacks receive real-time updates
-4. 🔄 **Migrate Signal bot to WebSocket SDK** → Real-time event reception
-5. 🔄 **Migrate Discord bot to WebSocket SDK** → Real-time event reception  
-6. 🔄 **Rewrite terminal client with WebSocket SDK** → Interactive gameplay with live updates
-7. 🔄 **Implement WebSocket event listener** → Broadcast events to all connected clients
-8. 🔄 **Add event broadcasting** → Real-time multi-player interactions
+4. ✅ **Migrate Signal bot to WebSocket SDK** → Real-time event reception ✨
+5. ✅ **Migrate Discord bot to WebSocket SDK** → Real-time event reception ✨
+6. ✅ **Rewrite terminal client with WebSocket SDK** → Interactive gameplay with live updates ✨
+7. ✅ **Implement WebSocket event listener** → Broadcast events to all connected clients ✨
+8. ✅ **Add event broadcasting** → Real-time multi-player interactions ✨
 
 See detailed task breakdown below.
 
@@ -175,14 +175,14 @@ Add combat, items, magic, and social systems.
   - [x] CommandLog.result field stores command outcomes
   - [x] Room descriptions returned from movement/look commands
   - [x] Format: "You moved north to: Room Name\nRoom Description"
-- [ ] **Event Broadcasting via WebSocket:**
-  - [ ] WebSocket listener subscribes to CommandLog table
-  - [ ] Filter events by room/proximity for relevance
-  - [ ] Broadcast to connected clients in real-time
-  - [ ] Event subscription system (room-based, proximity-based, global)
-  - [ ] Real-time room updates when players enter/leave
-  - [ ] Design event filtering (who needs to see what)
-  - [ ] Plan event delivery guarantees
+- [x] **Event Broadcasting via WebSocket:**
+  - [x] WebSocket listener subscribes to CommandLog table
+  - [x] Filter events by room/proximity for relevance
+  - [x] Broadcast to connected clients in real-time
+  - [x] Event subscription system (room-based, proximity-based, global)
+  - [x] Real-time room updates when players enter/leave
+  - [x] Event filtering implemented (distance-based visibility)
+  - [x] Event delivery via tokio mpsc channels
 
 ##### 1.4 Architecture Pattern Selection
 - [x] **Core Pattern Selected:** Tick-based event-driven with command queue

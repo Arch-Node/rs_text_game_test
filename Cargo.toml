@@ -26,17 +26,17 @@ serenity = { version = "0.12", default-features = false, features = ["client", "
 # Enable SpacetimeDB SDK client (proper way)
 default = []
 spacetimedb-sdk-client = ["spacetimedb-sdk", "tokio", "openssl", "chrono"]
-# Enable SpacetimeDB HTTP client (fallback)
+# Enable SpacetimeDB HTTP client (fallback - deprecated)
 spacetimedb-http = ["reqwest", "tokio"]
-# Enable Signal bot
-signal-client = ["actix-web", "tokio", "reqwest"]
-# Enable Discord bot
-discord-client = ["serenity", "tokio", "reqwest"]
+# Enable Signal bot - now uses WebSocket SDK for SpacetimeDB
+signal-client = ["actix-web", "tokio", "reqwest", "spacetimedb-sdk", "openssl", "chrono"]
+# Enable Discord bot - now uses WebSocket SDK for SpacetimeDB
+discord-client = ["serenity", "tokio", "reqwest", "spacetimedb-sdk", "openssl", "chrono"]
 
 [[bin]]
 name = "terminal_client"
 path = "src/bin/terminal_client.rs"
-required-features = ["spacetimedb-http"]
+required-features = ["spacetimedb-sdk-client"]
 
 [[bin]]
 name = "sdk_client"

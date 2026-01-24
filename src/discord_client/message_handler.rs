@@ -148,36 +148,18 @@ async fn handle_game_command(ctx: &Context, msg: &Message, bot: &DiscordBot, use
                 // Wait for tick to execute (3.5 seconds to be safe)
                 tokio::time::sleep(tokio::time::Duration::from_millis(3500)).await;
                 
-                // Get command results
-                match bot_clone.get_command_results(&user_id_clone, 1).await {
-                    Ok(results) if !results.is_empty() => {
-                        let (success, cmd, error) = &results[0];
-                        
-                        let response = if *success {
-                            // Get room description if it was a movement command
-                            if is_movement_command(cmd) {
-                                match bot_clone.get_current_room(&user_id_clone).await {
-                                    Ok(Some(room_desc)) => {
-                                        format!("✅ Moved {}\n\n{}", cmd, room_desc)
-                                    }
-                                    _ => format!("✅ Command executed: {}", cmd)
-                                }
-                            } else {
-                                format!("✅ Command executed: {}", cmd)
-                            }
-                        } else {
-                            format!("❌ Command failed: {}\n{}", cmd, error.as_deref().unwrap_or("Unknown error"))
-                        };
-                        
+                // Get command result from WebSocket SDK callback
+                match bot_clone.get_command_result(&user_id_clone).await {
+                    Ok(Some(result)) => {
                         // Edit the processing message with result
-                        let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content(response)).await;
+                        let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content(result)).await;
                     }
-                    Ok(_) => {
-                        // No results yet - might still be queued
+                    Ok(None) => {
+                        // No result yet - might still be queued
                         let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content("⚠️ Command queued but no result yet. Try 'look' to see your location.")).await;
                     }
                     Err(e) => {
-                        log::error!("Failed to get command results: {}", e);
+                        log::error!("Failed to get command result: {}", e);
                         let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content("⚠️ Command submitted but couldn't fetch result.")).await;
                     }
                 }

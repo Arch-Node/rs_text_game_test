@@ -115,16 +115,13 @@ impl SignalBot {
     
     /// Handle game commands from authenticated users
     async fn handle_game_command(&self, sender: &str, command: &str) -> Result<()> {
-        // Get session ID
-        let session_id = self.get_or_create_session(sender).await?;
-        
         // Handle instant commands locally
         if is_instant_command(command) {
             return self.handle_instant_command(sender, command).await;
         }
         
-        // Submit queued command to SpacetimeDB
-        self.submit_command(session_id, command).await?;
+        // Submit queued command to SpacetimeDB via WebSocket SDK
+        self.submit_command(sender, command).await?;
         
         // Send acknowledgment
         self.send_message(
@@ -141,36 +138,17 @@ impl SignalBot {
             // Wait for tick to execute (3.5 seconds to be safe)
             tokio::time::sleep(tokio::time::Duration::from_millis(3500)).await;
             
-            // Get command results
-            match bot_clone.get_command_results(&sender_clone, 1).await {
-                Ok(results) if !results.is_empty() => {
-                    let (success, cmd, error) = &results[0];
-                    
-                    let response = if *success {
-                        // Get room description if it was a movement command
-                        if is_movement_command(cmd) {
-                            match bot_clone.get_current_room(&sender_clone).await {
-                                Ok(Some(room_desc)) => {
-                                    format!("✅ Moved {}\n\n{}", cmd, room_desc)
-                                }
-                                _ => format!("✅ Command executed: {}", cmd)
-                            }
-                        } else {
-                            format!("✅ Command executed: {}", cmd)
-                        }
-                    } else {
-                        format!("❌ Command failed: {}\n{}", cmd, error.as_deref().unwrap_or("Unknown error"))
-                    };
-                    
+            // Get command result from WebSocket SDK callback
+            match bot_clone.get_command_result(&sender_clone).await {
+                Ok(Some(result)) => {
                     // Send result
-                    let _ = bot_clone.send_message(&sender_clone, &response).await;
+                    let _ = bot_clone.send_message(&sender_clone, &result).await;
                 }
-                Ok(_) => {
-                    // No results yet
+                Ok(None) => {
+                    // No result yet
                     let _ = bot_clone.send_message(&sender_clone, "⚠️ Command queued but no result yet. Try 'look' to see your location.").await;
                 }
                 Err(_) => {
-                    // Don't keep the error in scope across await
                     let _ = bot_clone.send_message(&sender_clone, "⚠️ Command submitted but couldn't fetch result.").await;
                 }
             }
