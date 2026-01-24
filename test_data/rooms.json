@@ -1,0 +1,60 @@
+[
+  {
+    "position_x": 100,
+    "position_y": 100,
+    "position_z": 100,
+    "dimension": "material",
+    "name": "The Starting Hall",
+    "description": "A grand hall with marble floors and tall pillars. Torches line the walls, casting flickering shadows. Exits lead north, south, east, and west.",
+    "exits": {
+      "north": {"x": 100, "y": 101, "z": 100},
+      "south": {"x": 100, "y": 99, "z": 100},
+      "east": {"x": 101, "y": 100, "z": 100},
+      "west": {"x": 99, "y": 100, "z": 100}
+    }
+  },
+  {
+    "position_x": 100,
+    "position_y": 101,
+    "position_z": 100,
+    "dimension": "material",
+    "name": "The Northern Courtyard",
+    "description": "An open courtyard with a fountain in the center. The sound of water echoes off the surrounding walls. A path leads back south.",
+    "exits": {
+      "south": {"x": 100, "y": 100, "z": 100}
+    }
+  },
+  {
+    "position_x": 101,
+    "position_y": 100,
+    "position_z": 100,
+    "dimension": "material",
+    "name": "The Eastern Garden",
+    "description": "A lush garden filled with exotic plants and flowers. The air is fragrant with their perfume. A path leads back west.",
+    "exits": {
+      "west": {"x": 100, "y": 100, "z": 100}
+    }
+  },
+  {
+    "position_x": 100,
+    "position_y": 99,
+    "position_z": 100,
+    "dimension": "material",
+    "name": "The Southern Passage",
+    "description": "A narrow stone passage leading deeper into the structure. The walls are damp and cold. A path leads back north.",
+    "exits": {
+      "north": {"x": 100, "y": 100, "z": 100}
+    }
+  },
+  {
+    "position_x": 99,
+    "position_y": 100,
+    "position_z": 100,
+    "dimension": "material",
+    "name": "The Western Library",
+    "description": "A cozy library with shelves upon shelves of ancient books. A reading desk sits near a window. A path leads back east.",
+    "exits": {
+      "east": {"x": 100, "y": 100, "z": 100}
+    }
+  }
+]

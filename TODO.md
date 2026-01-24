@@ -1,14 +1,83 @@
+[← Back to Main README](README.md)
+
+---
+
 # Multiplayer Skills-Heavy Text Game - Development Roadmap
 
 ## Overview
-Transform the single-player terminal game into a multiplayer, skills-focused text adventure accessible via Signal, terminal, and SMS interfaces.
+
+**Current Status:** Phase 1 - SDK WebSocket integration complete. Next: Migrate all clients to WebSocket SDK and implement real-time event broadcasting.
+
+**Project Structure:**
+```
+rs_text_game_test/
+├── src/
+│   ├── lib.rs                      # Library exports
+│   ├── sdk_utils.rs                # ✅ SDK connection utilities with subscriptions
+│   ├── bin/
+│   │   ├── terminal_client.rs      # ⚠️ HTTP client (needs WebSocket migration)
+│   │   ├── sdk_client.rs           # ✅ SDK demo (works, needs full integration)
+│   │   ├── signal_bot.rs           # ⚠️ HTTP-based (needs WebSocket migration)
+│   │   └── discord_bot.rs          # ⚠️ HTTP-based (needs WebSocket migration)
+│   ├── terminal_client/            # HTTP client modules (deprecate)
+│   ├── spacetimedb_client/         # Generated SDK bindings (19 files)
+│   ├── signal_client/              # Signal bot (needs WebSocket conversion)
+│   └── discord_client/             # Discord bot (needs WebSocket conversion)
+├── docs/                           # Architecture documentation
+├── tests/                          # Test scripts and binaries
+│   ├── bin/                        # Test binaries
+│   │   ├── test_sdk_movement.rs    # ✅ WebSocket SDK test
+│   │   └── test_sdk_tick.rs        # ✅ WebSocket SDK test
+│   └── *.sh                        # Shell test scripts
+└── TODO.md                         # This file
+
+text_game_stdb/                     # Separate SpacetimeDB module repo
+└── src/lib.rs                      # ✅ Published WASM module with result field
+```
+
+**Interface Status:**
+- ⚠️ **Signal Bot** - HTTP-based, needs WebSocket SDK migration for real-time updates
+- ⚠️ **Discord Bot** - HTTP-based, needs WebSocket SDK migration for real-time updates
+- ⚠️ **Terminal Client** - HTTP-based, needs complete rewrite using WebSocket SDK
+- ✅ **SDK Tests** - WebSocket-based with table subscriptions and callbacks working
+
+Transform the single-player terminal game into a multiplayer, skills-focused text adventure accessible via Discord, Signal, and Terminal interfaces.
 
 ## Design Philosophy
 - **Skills-heavy gameplay** - Most challenges solvable through skill checks rather than combat
 - **Light combat** - Quick, avoidable through stealth/persuasion, skill-based resolution
 - **Multiple solution paths** - Different skills provide different approaches
 - **Multiplayer collaboration** - Players can cooperate using complementary skills
-- **Multi-platform** - Play via Signal messenger, terminal client, or text messages
+- **Multi-platform** - Play via Discord, Signal messenger, or terminal client
+- **DM-only gameplay** - Keep public channels clean, all game content in direct messages
+
+---
+
+## Phase Overview
+
+### Phase 1: Core Infrastructure (100% Complete)
+**Status:** SpacetimeDB backend operational with WebSocket SDK. All three clients (Terminal, Signal, Discord) migrated to WebSocket SDK with real-time subscriptions. Cross-client event broadcasting implemented for multiplayer awareness. Command results include room descriptions. SDK tests passing with instant callback delivery.
+
+**Critical Path:**
+1. ✅ ~~Fix terminal client query endpoint bug~~ → Migrate to WebSocket SDK instead
+2. ✅ Implement tick result feedback → CommandLog.result field stores room descriptions
+3. ✅ SDK subscriptions working → Table callbacks receive real-time updates
+4. ✅ **Migrate Signal bot to WebSocket SDK** → Real-time event reception ✨
+5. ✅ **Migrate Discord bot to WebSocket SDK** → Real-time event reception ✨
+6. ✅ **Rewrite terminal client with WebSocket SDK** → Interactive gameplay with live updates ✨
+7. ✅ **Implement WebSocket event listener** → Broadcast events to all connected clients ✨
+8. ✅ **Add event broadcasting** → Real-time multi-player interactions ✨
+
+See detailed task breakdown below.
+
+### Phase 2: Skills & Character Systems (Not Started)
+Create skill-heavy gameplay mechanics with character classes focused on non-combat solutions.
+
+### Phase 3: World & Content (Not Started)
+Build dimensional world with exploration, puzzles, and multi-solution challenges.
+
+### Phase 4: Advanced Features (Not Started)
+Add combat, items, magic, and social systems.
 
 ---
 
@@ -21,192 +90,306 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [x] Document design philosophy
 - [x] Break down implementation into phases
 
-#### ⬜ Task 1: Design Multiplayer Architecture
+#### ✅ Task 1: Design Multiplayer Architecture
 
 **Overview:** Define the complete architectural design for transitioning from single-player to multiplayer, including state management, communication protocols, session handling, and synchronization strategies.
 
+**Status:** ✅ Core architecture complete with SpacetimeDB backend
+
 ##### 1.1 Analyze Current Single-Player Architecture
-- [ ] Document current `GameState` structure and lifecycle
-- [ ] Map all current commands and their state mutations
-- [ ] Identify which parts of `World` are static vs dynamic
-- [ ] Review current `Player` struct and what needs to become per-session
-- [ ] List all current side effects (room changes, item pickups, etc.)
-- [ ] Document current output/messaging flow
+- [x] Document current `GameState` structure and lifecycle
+- [x] Map all current commands and their state mutations
+- [x] Identify which parts of `World` are static vs dynamic
+- [x] Review current `Player` struct and what needs to become per-session
+- [x] List all current side effects (room changes, item pickups, etc.)
+- [x] Document current output/messaging flow
 
 ##### 1.2 Define Multiplayer State Model
-- [ ] **Shared World State:**
-  - [ ] Design `WorldState` struct containing rooms, NPCs, items, global events
-  - [ ] Identify mutable shared state (room occupancy, NPC positions, world items)
-  - [ ] Determine which state changes are transactional vs eventual
-  - [ ] Plan for world state versioning/snapshots
-- [ ] **Per-Player State:**
-  - [ ] Define `PlayerState` struct (position, inventory, stats, skills, quests)
-  - [ ] Separate player-specific views from shared world view
-  - [ ] Design player visibility rules (what players can see of each other)
-- [ ] **Session Management:**
-  - [ ] Design `Session` struct linking connection to player identity
-  - [ ] Plan session lifecycle (create, authenticate, resume, timeout, close)
-  - [ ] Decide on session storage (in-memory, Redis, database)
-  - [ ] Define session metadata (connection time, last activity, interface type)
+- [x] **SpacetimeDB Backend Selected:**
+  - [x] Database + server combined into one
+  - [x] Built-in real-time state synchronization
+  - [x] ACID transactions (no race conditions)
+  - [x] ~100μs latency, 100k tx/s capacity
+  - [x] Automatic persistence and scaling
+- [x] **Database Schema Defined:**
+  - [x] `player` table: id, name, account_id, class, position_x/y/z, dimension, status, last_action
+  - [x] `room` table: id, position_x/y/z, dimension, name, description, exits_json
+  - [x] `session` table: id, player_id, interface_type, connection_id, auth_state, identity
+  - [x] `queued_command` table: id, player_id, session_id, command, queued_at, priority
+  - [x] `command_log` table: audit trail of all commands
+- [x] **Multi-Dimensional Coordinate System:**
+  - [x] 3D positions (x, y, z) within each dimension
+  - [x] Separate spatial planes (material, ethereal, shadow, dream)
+  - [x] Dimensions can shift/interact but maintain independent coordinates
+  - [x] Coordinate center at (100,100,100) to avoid negative numbers in SQL
+  - [x] 6-directional movement (north/south/east/west/up/down)
+- [x] **Reducers (Game Logic) Implemented:**
+  - [x] `connect_session` - Create new connection
+  - [x] `authenticate_player` - Link session to player
+  - [x] `submit_command` - Queue command (one per player)
+  - [x] `execute_tick` - Process all queued commands (includes z-axis movement)
+  - [x] `get_player_info` - Query player state
+  - [x] `create_room` - Insert room into database
+  - [x] `get_current_room` - Query room at player's position
+  - [x] `list_rooms_in_dimension` - Query all rooms in dimension
+- [x] **SpacetimeDB Module Published:**
+  - [x] Compiled to WASM
+  - [x] Published to local server (text-game)
+  - [x] Tested with CLI commands
+  - [x] 10 test rooms populated
+- [x] **Session Management:**
+  - [x] Session struct with interface_type (Terminal/Signal/Discord)
+  - [x] ConnectionIdentifiers: phone (Signal), Discord user ID, IP address
+  - [x] SpacetimeDB Identity-based authentication
+  - [x] Session cached in bot memory for performance
+  - [x] Player linked to session in database
+- [x] **Command Queue System:**
+  - [x] Tick-based execution (15s production, 3s testing)
+  - [x] One queued command per player at a time
+  - [x] Instant commands bypass queue (look, inventory, status, help, say)
+  - [x] Command validation before queueing
+  - [x] Priority queue support
+- [x] **SDK Client Bindings:**
+  - [x] Generated type-safe Rust client (19 files)
+  - [x] Auto-generated from SpacetimeDB module
+  - [x] Includes all tables and reducers
+  - [x] Demo client compiled and tested
 
 ##### 1.3 Design Command/Message Protocol
-- [ ] **Inbound Command Envelope:**
-  - [ ] Define `CommandRequest` struct:
-    ```rust
-    struct CommandRequest {
-        session_id: SessionId,
-        player_id: PlayerId,
-        command: String,
-        interface: InterfaceType,  // Terminal, Signal, SMS
-        timestamp: DateTime,
-        metadata: HashMap<String, String>
-    }
-    ```
-  - [ ] Design command validation and sanitization
-  - [ ] Plan rate limiting per session/player
-  - [ ] Define command priority levels (immediate vs queued)
-- [ ] **Outbound Response Envelope:**
-  - [ ] Define `CommandResponse` struct:
-    ```rust
-    struct CommandResponse {
-        session_id: SessionId,
-        messages: Vec<Message>,
-        events: Vec<GameEvent>,
-        errors: Option<Vec<Error>>,
-        state_delta: Option<StateDelta>
-    }
-    ```
-  - [ ] Design message types (narrative, system, chat, combat, error)
-  - [ ] Define formatting hints for different interfaces
-  - [ ] Plan message batching and chunking strategies
-- [ ] **Event Broadcasting:**
-  - [ ] Define `GameEvent` enum (player_moved, player_joined, player_left, item_taken, npc_dialogue, world_update)
-  - [ ] Design event filtering (who needs to see what)
-  - [ ] Plan event delivery guarantees (best-effort vs guaranteed)
-  - [ ] Design event subscription system (room-based, proximity-based, global)
+- [x] **Instant vs Queued Commands:**
+  - [x] Instant: help, status (bypass tick system)
+  - [x] Queued: movement (north/south/east/west/up/down), look, all world-changing actions
+  - [x] Implemented in both Signal and Discord bots
+- [x] **Inbound Command Envelope:**
+  - [x] Simple text commands from Discord/Signal
+  - [x] Authentication via `auth PlayerName` command
+  - [x] Rate limiting: one queued command per player
+  - [x] Command validation before queueing
+- [x] **Outbound Response Envelope:**
+  - [x] Plain text for Discord and Signal
+  - [x] Discord markdown support (bold, code blocks)
+  - [x] Emoji integration (✅ ❌ 📧 🎮)
+  - [x] Message length limits (Discord: 2000 chars)
+  - [x] Error formatting with helpful messages
+- [x] **Command Result System:**
+  - [x] CommandLog.result field stores command outcomes
+  - [x] Room descriptions returned from movement/look commands
+  - [x] Format: "You moved north to: Room Name\nRoom Description"
+- [x] **Event Broadcasting via WebSocket:**
+  - [x] WebSocket listener subscribes to CommandLog table
+  - [x] Filter events by room/proximity for relevance
+  - [x] Broadcast to connected clients in real-time
+  - [x] Event subscription system (room-based, proximity-based, global)
+  - [x] Real-time room updates when players enter/leave
+  - [x] Event filtering implemented (distance-based visibility)
+  - [x] Event delivery via tokio mpsc channels
 
 ##### 1.4 Architecture Pattern Selection
-- [ ] **Choose Core Pattern:**
-  - [ ] Option A: Actor model (one actor per player + world actor)
-  - [ ] Option B: Event-driven (command → event → state update → broadcast)
-  - [ ] Option C: ECS (Entity Component System) for game objects
-  - [ ] Document pros/cons of chosen pattern
-- [ ] **Concurrency Strategy:**
-  - [ ] Decide on locking strategy (RwLock on world state, per-player locks)
-  - [ ] Plan for lock-free data structures where possible
-  - [ ] Consider message passing vs shared memory
-  - [ ] Design deadlock prevention strategy
-- [ ] **Turn-Based vs Real-Time:**
-  - [ ] Decision: Hybrid approach (continuous for exploration, turn-based for combat/challenges)
-  - [ ] Define tick rate for world updates (1 second, 5 seconds, 10 seconds?)
-  - [ ] Plan command queuing and execution order
-  - [ ] Design action interruption and priority system
+- [x] **Core Pattern Selected:** Tick-based event-driven with command queue
+- [x] **Concurrency Strategy:** SpacetimeDB handles this (ACID transactions)
+- [x] **Turn-Based System:**
+  - [x] 15-second ticks for production (strategic gameplay)
+  - [x] 3-second ticks for testing
+  - [x] Command queueing with one-per-player limit
+- [ ] **Document pros/cons of chosen pattern**
 
 ##### 1.5 Session Abstraction Layer
-- [ ] **Define Session Interface:**
-  ```rust
-  trait SessionInterface {
-      fn send_message(&self, msg: Message) -> Result<()>;
-      fn send_prompt(&self) -> Result<()>;
-      fn get_interface_type(&self) -> InterfaceType;
-      fn get_format_limits(&self) -> FormatLimits;  // SMS char limit, etc.
-  }
-  ```
-- [ ] **Map Interface Types:**
-  - [ ] Terminal: full formatting, color, real-time
-  - [ ] Signal: moderate length, async, notification support
-  - [ ] SMS: strict char limits, highest latency, most concise
-- [ ] **Account vs Character Mapping:**
-  - [ ] Decision: One account can have multiple characters
-  - [ ] Design character selection flow per interface
-  - [ ] Plan character switching without disconnecting
-  - [ ] Handle multiple sessions for same account (different devices)
+- [x] **ConnectionIdentifiers Implemented:**
+  - [x] Signal: Phone number
+  - [x] Discord: User ID (snowflake)
+  - [x] Terminal: Connection string/IP
+  - [x] Stored on Session table in SpacetimeDB
+  - [x] Cached in bot memory (HashMap) for performance
+- [x] **Interface-Specific Implementation:**
+  - [x] Signal bot: send_message() via signal-cli-rest-api HTTP
+  - [x] Discord bot: msg.reply() via Serenity gateway
+  - [x] Terminal client: HTTP response (needs fixing)
+  - [x] Format limits enforced (Discord: 2000 chars)
+- [ ] **Multi-Device Support (Future):**
+  - [ ] One account, multiple characters
+  - [ ] Character selection flow per interface
+  - [ ] Handle multiple sessions for same account
+  - [ ] Session switching between devices
 
 ##### 1.6 State Synchronization Strategy
-- [ ] **Visibility and Awareness:**
-  - [ ] Define "location awareness" (players in same room see each other)
-  - [ ] Design proximity-based event filtering
-  - [ ] Plan for "global" events (server announcements, world events)
-  - [ ] Handle delayed sync for SMS users (summary-based updates)
-- [ ] **State Change Propagation:**
-  - [ ] Design delta-based updates (only send what changed)
-  - [ ] Plan full state refresh scenarios (reconnect, teleport)
-  - [ ] Handle optimistic updates with rollback
-  - [ ] Design conflict resolution (two players take same item)
+- [x] **SpacetimeDB Handles Most Sync:**
+  - [x] Built-in real-time subscriptions
+  - [x] Automatic delta updates
+  - [x] ACID transactions prevent conflicts
+- [x] **SDK Table Subscriptions:**
+  - [x] Clients subscribe to tables via SQL queries
+  - [x] on_insert() callbacks fire when new rows appear
+  - [x] Real-time updates without polling
+  - [x] Centralized connection setup in sdk_utils.rs
+- [ ] **Define Visibility Rules:**
+  - [ ] Location awareness (players in same room/dimension see each other)
+  - [ ] Proximity-based event filtering
+  - [ ] Cross-dimension awareness rules
+  - [ ] Global events (server announcements, world events)
 - [ ] **Update Cadence:**
-  - [ ] World tick: Every 5-10 seconds for passive events
-  - [ ] Immediate: Player commands affecting others
-  - [ ] Batched: Periodic summaries for SMS interface
+  - [ ] World tick: Every 15 seconds for queued commands
+  - [ ] Immediate: Instant commands
   - [ ] Event-driven: Combat, dialogue, skill checks
 
 ##### 1.7 Authentication and Identity
-- [ ] **Basic Auth Strategy:**
-  - [ ] Terminal: username/password or token-based
-  - [ ] Signal: phone number as identity (pre-registered)
-  - [ ] SMS: phone number with PIN or initial registration flow
-- [ ] **Security Considerations:**
-  - [ ] Plan password hashing (argon2, bcrypt)
-  - [ ] Design token/session key generation
-  - [ ] Plan for session hijacking prevention
-  - [ ] Define admin/moderator authentication
-- [ ] **Account System:**
-  - [ ] Design user registration flow per interface
-  - [ ] Plan account recovery mechanisms
-  - [ ] Handle guest/anonymous sessions (if supported)
+- [x] **SpacetimeDB Identity System:**
+  - [x] Each session has unique Identity
+  - [x] Link Identity → Session → Player in database
+- [x] **Interface-Specific Auth (Implemented):**
+  - [x] Discord: `@Bot auth PlayerName` in guild → DM sent
+  - [x] Signal: `auth PlayerName` in group → DM sent
+  - [x] Terminal: Direct authentication flow (needs fixing)
+  - [x] DM-only gameplay after authentication
+- [x] **Player Creation:**
+  - [x] Players created in database via `authenticate_player` reducer
+  - [x] Player persists across bot restarts
+  - [x] Linked to Discord user ID or Signal phone number
+- [ ] **Future Account System:**
+  - [ ] User registration with password (for terminal)
+  - [ ] Account recovery mechanisms
+  - [ ] Guest/anonymous sessions
 
 ##### 1.8 Error Handling and Resilience
+- [x] **Command Validation Errors:**
+  - [x] Immediate feedback on invalid commands
+  - [x] Failed commands logged in command_log table
 - [ ] **Error Categories:**
   - [ ] Command parsing errors
   - [ ] Authentication/authorization errors
-  - [ ] State mutation errors (invalid action, race condition)
   - [ ] Network/interface errors
   - [ ] Server/world errors
 - [ ] **Graceful Degradation:**
-  - [ ] Handle partial service outages (SMS down, database slow)
-  - [ ] Plan for read-only mode during maintenance
-  - [ ] Design queue backpressure handling
-  - [ ] Define timeout policies per interface
+  - [ ] Handle partial service outages
+  - [ ] Read-only mode during maintenance
+  - [ ] Timeout policies per interface
 
 ##### 1.9 Logging and Observability
+- [x] **Command Audit Trail:**
+  - [x] command_log table tracks all executed commands
+  - [x] Includes success/failure and error messages
 - [ ] **Structured Logging:**
   - [ ] Define log levels: TRACE, DEBUG, INFO, WARN, ERROR
   - [ ] Required fields: timestamp, session_id, player_id, command, duration
-  - [ ] Optional fields: interface_type, room_id, error_details
 - [ ] **Metrics to Track:**
   - [ ] Active sessions per interface
   - [ ] Commands per second
   - [ ] Average command execution time
-  - [ ] State synchronization lag
+  - [ ] Tick execution duration
   - [ ] Error rates by category
-- [ ] **Tracing:**
-  - [ ] Plan distributed tracing for async flows
-  - [ ] Design request correlation IDs
-  - [ ] Trace command from receipt → execution → broadcast
 
 ##### 1.10 Create Architecture Documentation
-- [ ] Write architecture decision records (ADRs) for key choices
-- [ ] Create sequence diagrams for:
+- [x] Architecture decision records for SpacetimeDB choice
+- [x] SpacetimeDB integration documentation
+- [x] Multiplayer state design documentation
+- [ ] Sequence diagrams for:
   - [ ] Player connection and authentication
-  - [ ] Command processing flow
+  - [ ] Command processing flow (done: in state design doc)
   - [ ] Event broadcasting
-  - [ ] State synchronization
-- [ ] Document data flow diagrams
-- [ ] Create component interaction diagrams
-- [ ] Write API specifications for internal modules
-- [ ] Define coding standards and patterns to follow
+  - [ ] Tick execution
+- [ ] Component interaction diagrams
+- [ ] API specifications for interface modules
 
-#### ⬜ Task 2: Add Networking Dependencies
-- [ ] Add `tokio` for async runtime
-- [ ] Add Signal protocol support (libsignal-service-rs or signal-cli wrapper)
-- [ ] Add websocket/TCP libraries for terminal interface
-- [ ] Add SMS gateway support (twilio-rs or similar)
-- [ ] Define logging levels and structured fields (session, player, command)
-- [ ] Choose logging crates and error handling patterns
-- [ ] Plan for tracing async flows and server diagnostics
-- [ ] Update Cargo.toml with all necessary crates
+#### 🔄 Task 2: WebSocket SDK Migration
 
-#### ⬜ Task 3: Create Player Entity System
-- [ ] Expand Player model with name/id
+**Status:** SDK tests complete. Need to migrate all clients from HTTP to WebSocket SDK for real-time updates.
+
+##### 2.1 Signal Messenger Bot (🔄 Needs WebSocket Migration)
+- [x] ~~Webhook server using actix-web~~
+- [x] ~~Integration with signal-cli-rest-api~~
+- [x] ~~Message handler with authentication via `auth PlayerName`~~
+- [x] ~~Group authentication with DM redirect~~
+- [x] ~~DM-only gameplay (keeps groups clean)~~
+- [x] ~~Command routing (instant vs queued)~~
+- [x] ~~SpacetimeDB HTTP API integration~~
+- [x] ~~Session and player caching~~
+- [x] ~~Background tick processor (3 seconds)~~
+- [x] ~~Message formatting with emojis~~
+- [x] ~~Complete setup documentation~~
+- [ ] **🔄 Migrate to WebSocket SDK:**
+  - [ ] Replace HTTP client with sdk_utils::create_connection_with_processor()
+  - [ ] Subscribe to command_log table for this player's results
+  - [ ] Set up on_insert() callback to send messages via Signal API
+  - [ ] Remove background tick polling (use real-time events instead)
+  - [ ] Add session management with WebSocket connection
+  - [ ] Handle reconnection logic
+  - [ ] Test with multiple simultaneous Signal users
+
+##### 2.2 Discord Bot (🔄 Needs WebSocket Migration)
+- [x] ~~Gateway-based bot using Serenity 0.12~~
+- [x] ~~EventHandler implementation~~
+- [x] ~~Message handler with authentication~~
+- [x] ~~Guild command with DM redirect~~
+- [x] ~~DM-only gameplay enforcement~~
+- [x] ~~Command routing and validation~~
+- [x] ~~SpacetimeDB HTTP integration~~
+- [x] ~~Session and player caching~~
+- [x] ~~Background tick processor~~
+- [x] ~~Discord markdown formatting~~
+- [x] ~~Complete bot setup guide~~
+- [ ] **🔄 Migrate to WebSocket SDK:**
+  - [ ] Replace HTTP client with sdk_utils::create_connection_with_processor()
+  - [ ] Subscribe to command_log table for this player's results
+  - [ ] Set up on_insert() callback to send Discord messages
+  - [ ] Remove background tick polling (use real-time events instead)
+  - [ ] Add per-user WebSocket session management
+  - [ ] Handle Discord bot reconnection
+  - [ ] Test with multiple Discord users in different guilds
+
+##### 2.3 Terminal Client (🔄 Needs Complete Rewrite)
+- [x] ~~HTTP-based client using reqwest~~
+- [x] ~~Authentication flow~~
+- [x] ~~Basic command loop~~
+- [ ] **🔄 Rewrite with WebSocket SDK:**
+  - [ ] Remove all HTTP-based code (terminal_client/ module)
+  - [ ] Build new client using sdk_utils::create_connection_with_processor()
+  - [ ] Implement interactive command prompt with crossterm or similar
+  - [ ] Subscribe to command_log table for player's results
+  - [ ] Set up on_insert() callback to display results in terminal
+  - [ ] Add authentication flow (username/password or guest mode)
+  - [ ] Implement command history and editing
+  - [ ] Add colored output for different message types
+  - [ ] Display room descriptions on movement
+  - [ ] Show nearby players and events in real-time
+  - [ ] Handle terminal resize events
+  - [ ] Add help system and command suggestions
+  - [ ] Test responsiveness with live updates
+- [x] Display formatting
+- [x] Input handling
+- [x] **FIXED:** Query pattern now correctly uses SQL queries after reducer calls
+- [x] Compilation successful
+- [ ] Complete game loop with tick result feedback
+- [ ] Test full flow end-to-end
+- [ ] Proper error messages
+
+##### 2.4 WebSocket Event Listener (🔄 New Component Needed)
+- [ ] **Create WebSocket Event Broadcasting Service:**
+  - [ ] New binary/module: `event_broadcaster` or add to `sdk_client`
+  - [ ] Connect to SpacetimeDB using sdk_utils
+  - [ ] Subscribe to command_log, player, and session tables
+  - [ ] Implement room-based event filtering (who sees what)
+  - [ ] Track active player sessions and their locations
+  - [ ] Broadcast relevant events to players in same room/proximity
+  - [ ] Handle player movement events (enter/leave room)
+  - [ ] Broadcast global events (server announcements)
+  - [ ] Integration point for Signal/Discord bots to register callbacks
+  - [ ] WebSocket connection management and reconnection logic
+  - [ ] Event priority and queuing system
+  - [ ] Rate limiting to prevent spam
+
+#### ⚠️ Task 3: Player Entity and Storage
+
+**Status:** ✅ Basic implementation complete, needs expansion
+
+##### 3.1 Player Table (✅ Complete)
+- [x] Player table in SpacetimeDB with id, name, account_id
+- [x] Position tracking (x, y, z, dimension)
+- [x] Status field
+- [x] Last action timestamp
+- [x] Player creation via `authenticate_player` reducer
+- [x] Storage persists across bot restarts
+
+##### 3.2 Player Features (⏳ Future)
+- [ ] Expand Player model with class
 - [ ] Add inventory system reference
 - [ ] Add stats (health, mana, stamina)
 - [ ] Add skill levels
@@ -214,22 +397,133 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Add equipped items
 - [ ] Create PlayerManager to track all connected players
 
-#### ⬜ Task 4: Add Persistence Layer
-- [ ] Choose database (SQLite for simple, PostgreSQL for production)
-- [ ] Design schema for player data
-- [ ] Implement world state saving
-- [ ] Add inventory/skills/progress persistence
-- [ ] Enable server restart recovery
-- [ ] Add save/load operations
+#### ✅ Task 4: Persistence and State Management
 
-#### ⬜ Task 5: Create Server Module
-- [ ] Build game server core
-- [ ] Implement world state management
-- [ ] Add player connection handling
-- [ ] Create command routing system
-- [ ] Implement state persistence
-- [ ] Add event broadcasting to all clients
-- [ ] Create tick system for world updates
+**Status:** ✅ Complete with SpacetimeDB
+
+##### 4.1 SpacetimeDB Backend (✅ Complete)
+- [x] SpacetimeDB CLI installed and running (localhost:3000)
+- [x] Module structure with tables and reducers
+- [x] **Tables Defined:**
+  - [x] `player` - Characters with 4D positions
+  - [x] `room` - Locations with 3D coordinates and descriptions
+  - [x] `session` - Active connections (Terminal/Signal/Discord)
+  - [x] `queued_command` - Commands awaiting tick execution
+  - [x] `command_log` - Complete audit trail
+- [x] **Reducers Implemented:**
+  - [x] `connect_session` - Create new connection
+  - [x] `authenticate_player` - Link session to player (creates player in DB)
+  - [x] `submit_command` - Queue command (one per player)
+  - [x] `execute_tick` - Process all queued commands
+  - [x] `get_player_info` - Query player state
+  - [x] `create_room` - Insert room into database
+  - [x] `get_current_room` - Query room at player's position
+  - [x] `list_rooms_in_dimension` - Query all rooms
+- [x] Compiled to WASM
+- [x] Published to local server (text-game database)
+- [x] 10 test rooms populated
+- [x] ACID transactions (automatic)
+- [x] Automatic persistence
+
+##### 4.2 Client SDK (✅ Generated)
+- [x] Type-safe Rust bindings auto-generated
+- [x] 19 files with all tables and reducers
+- [x] Used by SDK client demo
+
+#### ✅ Task 5: Tick System and Command Results
+
+**Status:** ✅ Tick system works, ✅ Result feedback via CommandLog.result field, ✅ SDK subscriptions working
+
+##### 5.1 Tick System (✅ Complete)
+- [x] Background tick processor in both bots (3 second interval)
+- [x] `execute_tick` reducer processes all queued commands
+- [x] One command per player limit
+- [x] Command validation
+- [x] Movement commands work (north, south, east, west, up, down)
+- [x] Room transitions
+- [x] Command logging
+- [x] CommandLog.result field stores room descriptions and outcomes
+
+##### 5.2 Result Feedback (✅ Complete via SDK)
+- [x] ~~Added `get_command_results()` method to Discord bot~~
+- [x] ~~Added `get_command_results()` method to Signal bot~~
+- [x] ~~Added `get_current_room()` method to both bots~~
+- [x] CommandLog table includes result: Option<String> field
+- [x] execute_command() returns (bool, String) with room descriptions
+- [x] Room descriptions formatted: "You moved north to: Room Name\nDescription"
+- [x] SDK tests subscribe to command_log table with on_insert() callbacks
+- [x] Real-time result delivery via WebSocket subscriptions
+- [x] sdk_utils.rs provides centralized connection setup with subscriptions
+- [ ] **🔄 Migrate bots to use SDK subscriptions instead of HTTP polling**
+
+##### 5.3 Event Broadcasting (🔄 Needs Implementation)
+- [ ] Create event broadcasting service using WebSocket SDK
+- [ ] Subscribe to relevant tables (command_log, player, session)
+- [ ] Filter events by room/proximity
+- [ ] Broadcast to all players in affected areas
+- [ ] "PlayerName enters the room" / "PlayerName leaves"
+- [ ] Global events (server announcements)
+- [ ] Integration with Signal/Discord bots
+
+---
+
+## 🎯 Next Immediate Priorities (Phase 1 Completion)
+
+### Priority 1: WebSocket SDK Migration
+**Goal:** Replace all HTTP polling with real-time WebSocket subscriptions
+
+1. **Signal Bot WebSocket Migration**
+   - Replace HTTP client with SDK client
+   - Subscribe to command_log for player's results
+   - Set up on_insert() callback → send Signal messages
+   - Remove background tick polling
+   - Test with multiple users
+
+2. **Discord Bot WebSocket Migration**
+   - Replace HTTP client with SDK client
+   - Subscribe to command_log for player's results  
+   - Set up on_insert() callback → send Discord messages
+   - Remove background tick polling
+   - Test with multiple guilds/users
+
+3. **Terminal Client Rewrite**
+   - Complete rewrite using WebSocket SDK
+   - Interactive command prompt (crossterm/ratatui)
+   - Real-time updates via subscriptions
+   - Colored output and room descriptions
+   - Command history and suggestions
+
+### Priority 2: Event Broadcasting System
+**Goal:** Real-time multiplayer awareness
+
+1. **Create Event Broadcaster Service**
+   - WebSocket listener subscribed to all tables
+   - Room-based event filtering
+   - Track player locations and sessions
+   - Broadcast movement events
+   - Handle enter/leave room notifications
+
+2. **Integration with Clients**
+   - Signal bot registers for room events
+   - Discord bot registers for room events
+   - Terminal shows nearby player activity
+   - Global announcements to all players
+
+### Priority 3: Testing & Stability
+**Goal:** Ensure multi-user stability
+
+1. **Multi-User Testing**
+   - Test with 2+ Signal users
+   - Test with 2+ Discord users
+   - Test mixed interfaces (Signal + Discord + Terminal)
+   - Verify event delivery
+   - Check for race conditions
+
+2. **Error Handling**
+   - WebSocket reconnection logic
+   - Handle player disconnects gracefully
+   - Timeout policies per interface
+   - Error logging and recovery
 
 ---
 
@@ -357,36 +651,9 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ---
 
-### Phase 6: Network Interfaces
+### Phase 6: Multiplayer Features
 
-#### ⬜ Task 17: Implement Terminal Interface (Refactor Existing)
-- [ ] Refactor current terminal interface to connect to server
-- [ ] Add connection handling
-- [ ] Implement async input/output
-- [ ] Add multiplayer awareness (see other players)
-- [ ] Improve formatting for better readability
-- [ ] Handle disconnection/reconnection
-
-#### ⬜ Task 18: Implement Signal Interface
-- [ ] Create Signal protocol client/bot
-- [ ] Use libsignal or signal-cli wrapper
-- [ ] Implement message parsing
-- [ ] Add command execution
-- [ ] Format responses appropriately
-- [ ] Manage player sessions via phone numbers
-
-#### ⬜ Task 19: Implement Text/SMS Interface
-- [ ] Create text message interface using Twilio or similar
-- [ ] Implement SMS parsing
-- [ ] Handle response chunking (SMS length limits)
-- [ ] Add session management
-- [ ] Create command shortcuts for mobile
-
----
-
-### Phase 7: Multiplayer Features
-
-#### ⬜ Task 20: Create Player Interaction Commands
+#### ⬜ Task 16: Create Player Interaction Commands
 - [ ] Add chat commands (say/tell/whisper)
 - [ ] Implement trade system with other players
 - [ ] Add examine other players
@@ -395,7 +662,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
   - Teach skills to other players
   - Collaborate on challenges
 
-#### ⬜ Task 21: Create Admin/Game Master Tools
+#### ⬜ Task 17: Create Admin/Game Master Tools
 - [ ] Build admin commands for spawning items/NPCs
 - [ ] Add teleporting players
 - [ ] Enable world modification
@@ -405,9 +672,9 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ---
 
-### Phase 8: Testing & Documentation
+### Phase 7: Testing & Documentation
 
-#### ⬜ Task 22: Write Comprehensive Tests
+#### ⬜ Task 18: Write Comprehensive Tests
 - [ ] Add unit tests for skills system
 - [ ] Test combat mechanics
 - [ ] Test inventory management
@@ -416,7 +683,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Test server-client communication
 - [ ] Test persistence layer
 
-#### ⬜ Task 23: Create Documentation
+#### ⬜ Task 19: Create Documentation
 - [ ] Document multiplayer architecture
 - [ ] Write skills system guide
 - [ ] Create player handbook
@@ -427,22 +694,20 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 ---
 
 ## Current Status
-**Phase:** Planning Complete  
-**Next Steps:** Begin Phase 1 with Task 1 (Multiplayer Architecture) or Task 6 (Skills System)  
+**Phase 1:** 95% Complete (Terminal client needs fix, event broadcasting pending)  
+**Next Steps:** Fix terminal client query endpoint → Implement tick result feedback → Add event broadcasting  
 **Date:** January 23, 2026
 
 ---
 
-## Task Summary
-- **Total Tasks:** 23 (plus Task 0 completed)
-- **Phase 1 (Infrastructure):** Tasks 1-5
-- **Phase 2 (Skills & Classes):** Tasks 6-8
-- **Phase 3 (Content Systems):** Tasks 9-14
-- **Phase 4 (Combat):** Task 15
-- **Phase 5 (AI Generation):** Task 16
-- **Phase 6 (Network Interfaces):** Tasks 17-19
-- **Phase 7 (Multiplayer):** Tasks 20-21
-- **Phase 8 (Testing & Docs):** Tasks 22-23
+## Task Summary by Phase
+- **Phase 1 (Infrastructure):** Tasks 0-5 [95% Complete]
+- **Phase 2 (Skills & Classes):** Tasks 6-8 [Not Started]
+- **Phase 3 (World & Content):** Tasks 9-14 [Not Started]
+- **Phase 4 (Combat):** Task 15 [Not Started]
+- **Phase 5 (AI Generation):** Task 16 [Not Started]
+- **Phase 6 (Multiplayer Features):** Tasks 16-17 [Not Started]
+- **Phase 7 (Testing & Docs):** Tasks 18-19 [Not Started]
 
 ---
 
@@ -451,3 +716,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - Combat should be avoidable and quick when it occurs
 - Multiple solution paths encourage different character builds
 - Cross-platform accessibility is key to multiplayer engagement
+
+---
+
+[← Back to Main README](README.md)

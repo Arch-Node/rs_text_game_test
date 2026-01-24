@@ -8,3 +8,67 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 log = "0.4"
 env_logger = "0.11"
+anyhow = "1"
+# Tokio needed for async clients
+tokio = { version = "1", features = ["full"], optional = true }
+# For SpacetimeDB SDK client - use vendored OpenSSL to avoid system dependency
+spacetimedb-sdk = { version = "1.11", optional = true }
+openssl = { version = "0.10", features = ["vendored"], optional = true }
+chrono = { version = "0.4", optional = true }
+# For HTTP-based SpacetimeDB integration (fallback)
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false, optional = true }
+# For Signal bot webhook server
+actix-web = { version = "4", optional = true }
+# For Discord bot
+serenity = { version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model"], optional = true }
+
+[features]
+# Enable SpacetimeDB SDK client (proper way)
+default = []
+spacetimedb-sdk-client = ["spacetimedb-sdk", "tokio", "openssl", "chrono"]
+# Enable SpacetimeDB HTTP client (fallback - deprecated)
+spacetimedb-http = ["reqwest", "tokio"]
+# Enable Signal bot - now uses WebSocket SDK for SpacetimeDB
+signal-client = ["actix-web", "tokio", "reqwest", "spacetimedb-sdk", "openssl", "chrono"]
+# Enable Discord bot - now uses WebSocket SDK for SpacetimeDB
+discord-client = ["serenity", "tokio", "reqwest", "spacetimedb-sdk", "openssl", "chrono"]
+
+[[bin]]
+name = "terminal_client"
+path = "src/bin/terminal_client.rs"
+required-features = ["spacetimedb-sdk-client"]
+
+[[bin]]
+name = "sdk_client"
+path = "src/bin/sdk_client.rs"
+required-features = ["spacetimedb-sdk-client"]
+
+[[bin]]
+name = "signal_bot"
+path = "src/bin/signal_bot.rs"
+required-features = ["signal-client"]
+
+[[bin]]
+name = "discord_bot"
+path = "src/bin/discord_bot.rs"
+required-features = ["discord-client"]
+
+[[bin]]
+name = "test_terminal_tick"
+path = "tests/bin/test_terminal_tick.rs"
+required-features = ["spacetimedb-http"]
+
+[[bin]]
+name = "test_player_movement"
+path = "tests/bin/test_player_movement.rs"
+required-features = ["spacetimedb-http"]
+
+[[bin]]
+name = "test_sdk_tick"
+path = "tests/bin/test_sdk_tick.rs"
+required-features = ["spacetimedb-sdk-client"]
+
+[[bin]]
+name = "test_sdk_movement"
+path = "tests/bin/test_sdk_movement.rs"
+required-features = ["spacetimedb-sdk-client"]

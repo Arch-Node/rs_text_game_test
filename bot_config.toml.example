@@ -1,0 +1,125 @@
+# bot_config.toml.example
+#
+# Example configuration file for Signal bot
+# Copy to bot_config.toml and customize
+#
+# NOTE: This is optional. The bot works fine with just environment variables.
+# This file is for advanced configuration that you might want to version control.
+
+[bot]
+# Bot identifier (should match BOT_NUMBER or be unique ID)
+bot_id = "signal_bot_main"
+
+# Display name for the bot
+name = "Layered Realms Bot"
+
+# Interface type
+interface_type = "signal"
+
+[rate_limiting]
+# Maximum messages per user per hour
+messages_per_hour = 100
+
+# Whether to enable rate limiting
+enabled = true
+
+# Action when rate limit exceeded: "silent_drop", "error_message", "queue"
+on_limit_exceeded = "error_message"
+
+[features]
+# Whether to use emoji in responses
+emoji_enabled = true
+
+# Whether to log all messages (for debugging)
+verbose_logging = false
+
+# Whether to send typing indicators
+typing_indicators = false
+
+[game]
+# Default tick interval in seconds
+tick_interval = 3
+
+# Whether to auto-execute ticks in background
+auto_tick = true
+
+# Maximum queued commands per player
+max_queued_commands = 10
+
+[responses]
+# Welcome message for new users
+welcome_message = """
+👋 Welcome to Layered Realms!
+
+Please send your character name to begin your adventure.
+"""
+
+# Help text (overrides default)
+# help_message = "Custom help text here..."
+
+# Rate limit exceeded message
+rate_limit_message = """
+⏰ Whoa there! You've sent too many messages.
+
+Please wait a bit before sending more commands.
+"""
+
+[database]
+# Whether to persist sessions in database (vs in-memory)
+persist_sessions = true
+
+# Whether to log all commands to command_log
+log_all_commands = true
+
+# Whether to use database for rate limiting (vs in-memory)
+db_rate_limiting = false
+
+[security]
+# Allowed phone number patterns (regex, empty = allow all)
+# Example: ["^\\+1555.*", "^\\+1666.*"] for specific area codes
+allowed_numbers = []
+
+# Blocked phone numbers
+blocked_numbers = []
+
+# Whether to require authentication
+require_auth = true
+
+# Session timeout in seconds (0 = no timeout)
+session_timeout = 0
+
+[monitoring]
+# Whether to expose metrics endpoint
+enable_metrics = false
+
+# Metrics endpoint port (if different from main port)
+metrics_port = 9090
+
+# Health check endpoint
+health_check_path = "/health"
+
+[signal_api]
+# signal-cli-rest-api URL (can override SIGNAL_API_URL env var)
+# api_url = "http://localhost:8080"
+
+# Timeout for API calls in seconds
+timeout = 30
+
+# Retry attempts for failed sends
+retry_attempts = 3
+
+# Retry delay in seconds
+retry_delay = 2
+
+[spacetimedb]
+# SpacetimeDB URL (can override SPACETIME_URL env var)
+# api_url = "http://localhost:3000"
+
+# Database name
+database = "text-game"
+
+# Connection timeout in seconds
+timeout = 10
+
+# Whether to use SDK or HTTP client
+use_sdk = false
