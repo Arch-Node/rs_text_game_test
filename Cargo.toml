@@ -8,3 +8,41 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 log = "0.4"
 env_logger = "0.11"
+# Tokio needed for multiplayer module
+tokio = { version = "1", features = ["full"], optional = true }
+# For SpacetimeDB SDK client - use vendored OpenSSL to avoid system dependency
+spacetimedb-sdk = { version = "1.11", optional = true }
+openssl = { version = "0.10", features = ["vendored"], optional = true }
+chrono = { version = "0.4", optional = true }
+# For HTTP-based SpacetimeDB integration (fallback)
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false, optional = true }
+# For Signal bot webhook server
+actix-web = { version = "4", optional = true }
+
+[features]
+# Enable SpacetimeDB SDK client (proper way)
+default = []
+spacetimedb-sdk-client = ["spacetimedb-sdk", "tokio", "openssl", "chrono"]
+# Enable SpacetimeDB HTTP client (fallback)
+spacetimedb-http = ["reqwest", "tokio"]
+# Enable Signal bot
+signal-client = ["actix-web", "tokio", "reqwest"]
+
+[[bin]]
+name = "rust_game_test"
+path = "src/main.rs"
+
+[[bin]]
+name = "terminal_client"
+path = "src/bin/terminal_client.rs"
+required-features = ["spacetimedb-http"]
+
+[[bin]]
+name = "sdk_client"
+path = "src/bin/sdk_client.rs"
+required-features = ["spacetimedb-sdk-client"]
+
+[[bin]]
+name = "signal_bot"
+path = "src/bin/signal_bot.rs"
+required-features = ["signal-client"]

@@ -2,7 +2,7 @@
   "meta": {
     "world_name": "Layered Realms",
     "version": 1,
-    "notes": "Rooms have layer (dimension) and x,y,z (3D position). Currently all on layer 0."
+    "notes": "LEGACY FILE - This was used by the single-player game. The multiplayer version uses SpacetimeDB Room table instead. See text_game_stdb/src/lib.rs for current room data. Rooms now use (100,100,100) as center point."
   },
 
   "start": { "layer": 0, "x": 0, "y": 0, "z": 0 },

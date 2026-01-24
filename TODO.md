@@ -21,189 +21,188 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [x] Document design philosophy
 - [x] Break down implementation into phases
 
-#### ⬜ Task 1: Design Multiplayer Architecture
+#### ✅ Task 1: Design Multiplayer Architecture
 
 **Overview:** Define the complete architectural design for transitioning from single-player to multiplayer, including state management, communication protocols, session handling, and synchronization strategies.
 
+**Status:** ✅ Core architecture complete with SpacetimeDB backend
+
 ##### 1.1 Analyze Current Single-Player Architecture
-- [ ] Document current `GameState` structure and lifecycle
-- [ ] Map all current commands and their state mutations
-- [ ] Identify which parts of `World` are static vs dynamic
-- [ ] Review current `Player` struct and what needs to become per-session
-- [ ] List all current side effects (room changes, item pickups, etc.)
-- [ ] Document current output/messaging flow
+- [x] Document current `GameState` structure and lifecycle
+- [x] Map all current commands and their state mutations
+- [x] Identify which parts of `World` are static vs dynamic
+- [x] Review current `Player` struct and what needs to become per-session
+- [x] List all current side effects (room changes, item pickups, etc.)
+- [x] Document current output/messaging flow
 
 ##### 1.2 Define Multiplayer State Model
-- [ ] **Shared World State:**
-  - [ ] Design `WorldState` struct containing rooms, NPCs, items, global events
-  - [ ] Identify mutable shared state (room occupancy, NPC positions, world items)
-  - [ ] Determine which state changes are transactional vs eventual
-  - [ ] Plan for world state versioning/snapshots
-- [ ] **Per-Player State:**
-  - [ ] Define `PlayerState` struct (position, inventory, stats, skills, quests)
-  - [ ] Separate player-specific views from shared world view
-  - [ ] Design player visibility rules (what players can see of each other)
-- [ ] **Session Management:**
-  - [ ] Design `Session` struct linking connection to player identity
-  - [ ] Plan session lifecycle (create, authenticate, resume, timeout, close)
-  - [ ] Decide on session storage (in-memory, Redis, database)
-  - [ ] Define session metadata (connection time, last activity, interface type)
+- [x] **SpacetimeDB Backend Selected:**
+  - [x] Database + server combined into one
+  - [x] Built-in real-time state synchronization
+  - [x] ACID transactions (no race conditions)
+  - [x] ~100μs latency, 100k tx/s capacity
+  - [x] Automatic persistence and scaling
+- [x] **Database Schema Defined:**
+  - [x] `player` table: id, name, account_id, class, position_x/y/z, dimension, status, last_action
+  - [x] `room` table: id, position_x/y/z, dimension, name, description, exits_json
+  - [x] `session` table: id, player_id, interface_type, connection_id, auth_state, identity
+  - [x] `queued_command` table: id, player_id, session_id, command, queued_at, priority
+  - [x] `command_log` table: audit trail of all commands
+- [x] **Multi-Dimensional Coordinate System:**
+  - [x] 3D positions (x, y, z) within each dimension
+  - [x] Separate spatial planes (material, ethereal, shadow, dream)
+  - [x] Dimensions can shift/interact but maintain independent coordinates
+  - [x] Coordinate center at (100,100,100) to avoid negative numbers in SQL
+  - [x] 6-directional movement (north/south/east/west/up/down)
+- [x] **Reducers (Game Logic) Implemented:**
+  - [x] `connect_session` - Create new connection
+  - [x] `authenticate_player` - Link session to player
+  - [x] `submit_command` - Queue command (one per player)
+  - [x] `execute_tick` - Process all queued commands (includes z-axis movement)
+  - [x] `get_player_info` - Query player state
+  - [x] `create_room` - Insert room into database
+  - [x] `get_current_room` - Query room at player's position
+  - [x] `list_rooms_in_dimension` - Query all rooms in dimension
+- [x] **SpacetimeDB Module Published:**
+  - [x] Compiled to WASM
+  - [x] Published to local server (text-game)
+  - [x] Tested with CLI commands
+  - [x] 10 test rooms populated
+- [x] **Session Management:**
+  - [x] Session struct with interface type (Terminal/Signal/SMS)
+  - [x] ConnectionIdentifiers support (phone, signal ID, IP, MAC)
+  - [x] SpacetimeDB Identity-based authentication
+- [x] **Command Queue System:**
+  - [x] Tick-based execution (15s production, 3s testing)
+  - [x] One queued command per player at a time
+  - [x] Instant commands bypass queue (look, inventory, status, help, say)
+  - [x] Command validation before queueing
+  - [x] Priority queue support
+- [x] **SDK Client Bindings:**
+  - [x] Generated type-safe Rust client (19 files)
+  - [x] Auto-generated from SpacetimeDB module
+  - [x] Includes all tables and reducers
+  - [x] Demo client compiled and tested
 
 ##### 1.3 Design Command/Message Protocol
+- [x] **Instant vs Queued Commands:**
+  - [x] Instant: look, examine, inventory, status, help, say, tell, emote, who, score, time
+  - [x] Queued: movement, actions, anything that changes world state
 - [ ] **Inbound Command Envelope:**
-  - [ ] Define `CommandRequest` struct:
-    ```rust
-    struct CommandRequest {
-        session_id: SessionId,
-        player_id: PlayerId,
-        command: String,
-        interface: InterfaceType,  // Terminal, Signal, SMS
-        timestamp: DateTime,
-        metadata: HashMap<String, String>
-    }
-    ```
+  - [ ] Define `CommandRequest` structure for different interfaces
   - [ ] Design command validation and sanitization
-  - [ ] Plan rate limiting per session/player
-  - [ ] Define command priority levels (immediate vs queued)
+  - [ ] Plan rate limiting per session/player (done: one command per player)
 - [ ] **Outbound Response Envelope:**
-  - [ ] Define `CommandResponse` struct:
-    ```rust
-    struct CommandResponse {
-        session_id: SessionId,
-        messages: Vec<Message>,
-        events: Vec<GameEvent>,
-        errors: Option<Vec<Error>>,
-        state_delta: Option<StateDelta>
-    }
-    ```
-  - [ ] Design message types (narrative, system, chat, combat, error)
-  - [ ] Define formatting hints for different interfaces
+  - [ ] Define message types (narrative, system, chat, combat, error)
+  - [ ] Define formatting hints for different interfaces (SMS char limits, etc.)
   - [ ] Plan message batching and chunking strategies
 - [ ] **Event Broadcasting:**
-  - [ ] Define `GameEvent` enum (player_moved, player_joined, player_left, item_taken, npc_dialogue, world_update)
   - [ ] Design event filtering (who needs to see what)
-  - [ ] Plan event delivery guarantees (best-effort vs guaranteed)
+  - [ ] Plan event delivery guarantees
   - [ ] Design event subscription system (room-based, proximity-based, global)
 
 ##### 1.4 Architecture Pattern Selection
-- [ ] **Choose Core Pattern:**
-  - [ ] Option A: Actor model (one actor per player + world actor)
-  - [ ] Option B: Event-driven (command → event → state update → broadcast)
-  - [ ] Option C: ECS (Entity Component System) for game objects
-  - [ ] Document pros/cons of chosen pattern
-- [ ] **Concurrency Strategy:**
-  - [ ] Decide on locking strategy (RwLock on world state, per-player locks)
-  - [ ] Plan for lock-free data structures where possible
-  - [ ] Consider message passing vs shared memory
-  - [ ] Design deadlock prevention strategy
-- [ ] **Turn-Based vs Real-Time:**
-  - [ ] Decision: Hybrid approach (continuous for exploration, turn-based for combat/challenges)
-  - [ ] Define tick rate for world updates (1 second, 5 seconds, 10 seconds?)
-  - [ ] Plan command queuing and execution order
-  - [ ] Design action interruption and priority system
+- [x] **Core Pattern Selected:** Tick-based event-driven with command queue
+- [x] **Concurrency Strategy:** SpacetimeDB handles this (ACID transactions)
+- [x] **Turn-Based System:**
+  - [x] 15-second ticks for production (strategic gameplay)
+  - [x] 3-second ticks for testing
+  - [x] Command queueing with one-per-player limit
+- [ ] **Document pros/cons of chosen pattern**
 
 ##### 1.5 Session Abstraction Layer
-- [ ] **Define Session Interface:**
-  ```rust
-  trait SessionInterface {
-      fn send_message(&self, msg: Message) -> Result<()>;
-      fn send_prompt(&self) -> Result<()>;
-      fn get_interface_type(&self) -> InterfaceType;
-      fn get_format_limits(&self) -> FormatLimits;  // SMS char limit, etc.
-  }
-  ```
-- [ ] **Map Interface Types:**
-  - [ ] Terminal: full formatting, color, real-time
-  - [ ] Signal: moderate length, async, notification support
-  - [ ] SMS: strict char limits, highest latency, most concise
+- [x] **ConnectionIdentifiers Defined:**
+  - [x] Signal ID, phone number, IP address, MAC address, device fingerprint
+  - [x] Stored on Session (not Player) to support multi-device play
+- [ ] **Define Session Interface Trait:**
+  - [ ] send_message() with format limits per interface
+  - [ ] send_prompt()
+  - [ ] get_interface_type()
+  - [ ] get_format_limits() (SMS: 160 chars, etc.)
 - [ ] **Account vs Character Mapping:**
-  - [ ] Decision: One account can have multiple characters
+  - [ ] One account can have multiple characters
   - [ ] Design character selection flow per interface
-  - [ ] Plan character switching without disconnecting
   - [ ] Handle multiple sessions for same account (different devices)
 
 ##### 1.6 State Synchronization Strategy
-- [ ] **Visibility and Awareness:**
-  - [ ] Define "location awareness" (players in same room see each other)
-  - [ ] Design proximity-based event filtering
-  - [ ] Plan for "global" events (server announcements, world events)
-  - [ ] Handle delayed sync for SMS users (summary-based updates)
-- [ ] **State Change Propagation:**
-  - [ ] Design delta-based updates (only send what changed)
-  - [ ] Plan full state refresh scenarios (reconnect, teleport)
-  - [ ] Handle optimistic updates with rollback
-  - [ ] Design conflict resolution (two players take same item)
+- [x] **SpacetimeDB Handles Most Sync:**
+  - [x] Built-in real-time subscriptions
+  - [x] Automatic delta updates
+  - [x] ACID transactions prevent conflicts
+- [ ] **Define Visibility Rules:**
+  - [ ] Location awareness (players in same room/dimension see each other)
+  - [ ] Proximity-based event filtering
+  - [ ] Cross-dimension awareness rules
+  - [ ] Global events (server announcements, world events)
 - [ ] **Update Cadence:**
-  - [ ] World tick: Every 5-10 seconds for passive events
-  - [ ] Immediate: Player commands affecting others
-  - [ ] Batched: Periodic summaries for SMS interface
+  - [ ] World tick: Every 15 seconds for queued commands
+  - [ ] Immediate: Instant commands
   - [ ] Event-driven: Combat, dialogue, skill checks
 
 ##### 1.7 Authentication and Identity
-- [ ] **Basic Auth Strategy:**
-  - [ ] Terminal: username/password or token-based
-  - [ ] Signal: phone number as identity (pre-registered)
-  - [ ] SMS: phone number with PIN or initial registration flow
-- [ ] **Security Considerations:**
-  - [ ] Plan password hashing (argon2, bcrypt)
-  - [ ] Design token/session key generation
-  - [ ] Plan for session hijacking prevention
-  - [ ] Define admin/moderator authentication
-- [ ] **Account System:**
-  - [ ] Design user registration flow per interface
-  - [ ] Plan account recovery mechanisms
-  - [ ] Handle guest/anonymous sessions (if supported)
+- [x] **SpacetimeDB Identity System:**
+  - [x] Each session has unique Identity
+  - [x] Link Identity → Session → Player
+- [ ] **Interface-Specific Auth:**
+  - [ ] Terminal: username/password or token
+  - [ ] Signal: phone number + registration
+  - [ ] SMS: phone number + PIN
+- [ ] **Account System Design:**
+  - [ ] User registration flow per interface
+  - [ ] Account recovery mechanisms
+  - [ ] Guest/anonymous sessions (if supported)
 
 ##### 1.8 Error Handling and Resilience
+- [x] **Command Validation Errors:**
+  - [x] Immediate feedback on invalid commands
+  - [x] Failed commands logged in command_log table
 - [ ] **Error Categories:**
   - [ ] Command parsing errors
   - [ ] Authentication/authorization errors
-  - [ ] State mutation errors (invalid action, race condition)
   - [ ] Network/interface errors
   - [ ] Server/world errors
 - [ ] **Graceful Degradation:**
-  - [ ] Handle partial service outages (SMS down, database slow)
-  - [ ] Plan for read-only mode during maintenance
-  - [ ] Design queue backpressure handling
-  - [ ] Define timeout policies per interface
+  - [ ] Handle partial service outages
+  - [ ] Read-only mode during maintenance
+  - [ ] Timeout policies per interface
 
 ##### 1.9 Logging and Observability
+- [x] **Command Audit Trail:**
+  - [x] command_log table tracks all executed commands
+  - [x] Includes success/failure and error messages
 - [ ] **Structured Logging:**
   - [ ] Define log levels: TRACE, DEBUG, INFO, WARN, ERROR
   - [ ] Required fields: timestamp, session_id, player_id, command, duration
-  - [ ] Optional fields: interface_type, room_id, error_details
 - [ ] **Metrics to Track:**
   - [ ] Active sessions per interface
   - [ ] Commands per second
   - [ ] Average command execution time
-  - [ ] State synchronization lag
+  - [ ] Tick execution duration
   - [ ] Error rates by category
-- [ ] **Tracing:**
-  - [ ] Plan distributed tracing for async flows
-  - [ ] Design request correlation IDs
-  - [ ] Trace command from receipt → execution → broadcast
 
 ##### 1.10 Create Architecture Documentation
-- [ ] Write architecture decision records (ADRs) for key choices
-- [ ] Create sequence diagrams for:
+- [x] Architecture decision records for SpacetimeDB choice
+- [x] SpacetimeDB integration documentation
+- [x] Multiplayer state design documentation
+- [ ] Sequence diagrams for:
   - [ ] Player connection and authentication
-  - [ ] Command processing flow
+  - [ ] Command processing flow (done: in state design doc)
   - [ ] Event broadcasting
-  - [ ] State synchronization
-- [ ] Document data flow diagrams
-- [ ] Create component interaction diagrams
-- [ ] Write API specifications for internal modules
-- [ ] Define coding standards and patterns to follow
+  - [ ] Tick execution
+- [ ] Component interaction diagrams
+- [ ] API specifications for interface modules
 
 #### ⬜ Task 2: Add Networking Dependencies
 - [ ] Add `tokio` for async runtime
+- [ ] Add `spacetimedb` SDK for backend (replaces traditional database + server)
 - [ ] Add Signal protocol support (libsignal-service-rs or signal-cli wrapper)
-- [ ] Add websocket/TCP libraries for terminal interface
+- [ ] Add websocket/TCP libraries for terminal interface (or use SpacetimeDB's built-in networking)
 - [ ] Add SMS gateway support (twilio-rs or similar)
 - [ ] Define logging levels and structured fields (session, player, command)
 - [ ] Choose logging crates and error handling patterns
 - [ ] Plan for tracing async flows and server diagnostics
 - [ ] Update Cargo.toml with all necessary crates
+- [ ] **Note:** SpacetimeDB handles much of the networking/state sync automatically
 
 #### ⬜ Task 3: Create Player Entity System
 - [ ] Expand Player model with name/id
@@ -215,19 +214,46 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Create PlayerManager to track all connected players
 
 #### ⬜ Task 4: Add Persistence Layer
-- [ ] Choose database (SQLite for simple, PostgreSQL for production)
-- [ ] Design schema for player data
-- [ ] Implement world state saving
-- [ ] Add inventory/skills/progress persistence
-- [ ] Enable server restart recovery
-- [ ] Add save/load operations
-
-#### ⬜ Task 5: Create Server Module
-- [ ] Build game server core
-- [ ] Implement world state management
-- [ ] Add player connection handling
-- [ ] Create command routing system
-- [ ] Implement state persistence
+- [ ] **SpacetimeDB Integration** (chosen backend)
+  - [ ] Install SpacetimeDB CLI and start local instance
+  - [ ] Add `spacetimedb` Rust SDK dependency to Cargo.toml
+  - [ ] Define SpacetimeDB tables for game state:
+    - [ ] `Player` table (id, name, account_id, class, stats, skills)
+    - [ ] `Session` table (session_id, player_id, interface_type, connection_ids, auth_state)
+    - [ ] `WorldState` table (room_occupancy, dynamic_items, npc_positions)
+    - [ ] `CommandLog` table (audit trail of all commands)
+  - [ ] Create SpacetimeDB reducers (stored procedures):
+    - [ ] `authenticate_session` - Validate and create session
+    - [ ] `submit_command` - Queue player command
+    - [ ] `execute_tick` - Process all queued commands
+    - [ ] `broadcast_event` - Send game events to relevant sessions
+  - [ ] Design schema for player data with automatic sync
+  - [ ] Implement world state saving with ACID guarantees
+  - [ ] Add inventory/skills/progress persistence
+  - [ ] Enable server restart recovery (automatic with SpacetimeDB)
+  - [ ] Configure SpacetimeDB subscriptions for real-time client updates
+- [ ] **Why SpacetimeDB:**
+  - Built-in real-time state synchronization (no custom protocol needed)
+  - ACID transactions solve race conditions (two players taking same item)
+  - Game logic runs in database as WASM modules (100μs latency)
+  - Automatic persistence and scaling (no Docker/K8s complexity)
+  - Perfect fit for multiplayer games (used by BitCraft MMORPG)
+  - Client SDKs auto-generated for Rust/TypeScript/C#
+**Build SpacetimeDB Module** (instead of traditional server)
+  - [ ] Define module structure with tables and reducers
+  - [ ] Implement world state management as SpacetimeDB tables
+  - [ ] Add player connection handling via SpacetimeDB subscriptions
+  - [ ] Create command routing system as reducers
+  - [ ] Implement state persistence (automatic with SpacetimeDB)
+  - [ ] Add event broadcasting using SpacetimeDB's subscription system
+  - [ ] Create tick system for world updates (reducer scheduled at intervals)
+  - [ ] Compile module to WASM
+  - [ ] Publish to local SpacetimeDB instance
+  - [ ] Test real-time sync and state updates
+- [ ] **Alternative: Build custom adapter layer**
+  - [ ] If SpacetimeDB's model doesn't fit tick-based architecture
+  - [ ] Create thin layer between SpacetimeDB and existing multiplayer code
+  - [ ] Use SpacetimeDB primarily as persistent store with pub/sub
 - [ ] Add event broadcasting to all clients
 - [ ] Create tick system for world updates
 
@@ -367,13 +393,29 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Improve formatting for better readability
 - [ ] Handle disconnection/reconnection
 
-#### ⬜ Task 18: Implement Signal Interface
-- [ ] Create Signal protocol client/bot
-- [ ] Use libsignal or signal-cli wrapper
-- [ ] Implement message parsing
-- [ ] Add command execution
-- [ ] Format responses appropriately
-- [ ] Manage player sessions via phone numbers
+#### ✅ Task 18: Signal Messenger Interface (Phase 1 Complete)
+
+**Status:** Basic functionality working, see [SIGNAL_STATUS.md](../SIGNAL_STATUS.md)
+
+**Completed:**
+- [x] Create Signal bot with signal-cli-rest-api integration
+- [x] Implement webhook server (actix-web on port 3001)
+- [x] Message parsing and command routing
+- [x] Add command execution via SpacetimeDB
+- [x] Format responses with emojis (📍 🚶 ✅ ❌)
+- [x] Manage player sessions via phone numbers (in-memory cache)
+- [x] Authentication flow (phone → character name)
+- [x] Background tick processor (3 seconds)
+- [x] Complete setup documentation
+
+**Phase 2 TODO:**
+- [ ] Query session table after creation
+- [ ] Implement command_log subscription
+- [ ] Support Signal group chats
+- [ ] Rate limiting per phone number
+- [ ] Database-backed session persistence
+
+**Documentation:** [SIGNAL_BOT_SETUP.md](../SIGNAL_BOT_SETUP.md), [SIGNAL_STATUS.md](../SIGNAL_STATUS.md)
 
 #### ⬜ Task 19: Implement Text/SMS Interface
 - [ ] Create text message interface using Twilio or similar
