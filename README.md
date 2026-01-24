@@ -277,4 +277,8 @@ See the individual module READMEs for implementation details:
 
 ## 📜 License
 
-This is a learning project - feel free to use and modify as needed.
+This project is licensed under GPL v3 - feel free to use and modify as needed for learning purposes.
+
+### Third-Party Licenses
+
+**SpacetimeDB**: This project uses [SpacetimeDB](https://github.com/clockworklabs/SpacetimeDB) as its backend database. SpacetimeDB is licensed under the BSL 1.1 (Business Source License 1.1), which converts to AGPL v3.0 with a linking exception after a certain period. The linking exception means you can use SpacetimeDB without having to open source your own code. See the [SpacetimeDB LICENSE](https://github.com/clockworklabs/SpacetimeDB/blob/master/LICENSE.txt) for details.
