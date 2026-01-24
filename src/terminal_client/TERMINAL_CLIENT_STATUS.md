@@ -30,39 +30,38 @@ Tavern            (100,102,100) - far north
 Spirit Plaza      (100,100,100) - ethereal dimension
 ```
 
-## ⚠️ Terminal Client Needs Work
+## ✅ Terminal Client Fixed
 
-### Current Issue
-The terminal client expects reducers to return JSON data, but SpacetimeDB reducers:
-- Only return `Ok(())` or `Err(String)`
-- Don't return data via HTTP
-- Data must be queried from tables separately
+### What Was Fixed
+The terminal client now correctly uses SpacetimeDB HTTP API:
 
-### What Needs To Happen
+1. **Reducer calls** - Send JSON arrays directly (e.g., `[session_id, "player_name"]`)
+2. **No return data from reducers** - Reducers only return `Ok(())` or `Err(String)`
+3. **Query tables separately** - After calling reducers, query tables with SQL to get data
+4. **Correct SQL endpoint** - POST to `/database/sql/{database}` with SQL as body
 
-**Option 1: Query After Reducers (Simpler)**
+### Implementation Pattern
+
 ```rust
-// Call reducer
-client.post("/database/call/text-game/connect_session")
-    .json(&["terminal", "conn-123"])
+// 1. Call reducer (creates data)
+client.post("/database/call/text-game/authenticate_player")
+    .json(&[session_id, "Hero"])
     .send()?;
 
-// Then query the result
+// 2. Query table (retrieve data)
 client.post("/database/sql/text-game")
-    .json(&{SELECT * FROM session WHERE connection_id = 'conn-123'})
+    .body("SELECT * FROM player WHERE name = 'Hero'")
     .send()?;
 ```
 
-**Option 2: Use SpacetimeDB SDK (Proper)**
-- Use `spacetimedb-sdk` crate instead of raw HTTP
-- Get real-time subscriptions
-- Automatic state synchronization
-
-### Quick Test Commands
+## Quick Test Commands
 
 ```bash
-# Test backend manually
-./test_backend.sh
+# Build terminal client
+cargo build --bin terminal_client --features spacetimedb-http
+
+# Run terminal client
+cargo run --bin terminal_client --features spacetimedb-http
 
 # Create session
 spacetime call text-game -s local connect_session '"terminal"' '"test-conn"'

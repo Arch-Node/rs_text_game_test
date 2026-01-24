@@ -6,34 +6,40 @@
 
 ## Overview
 
-**Current Status:** Phase 1 substantially complete - SpacetimeDB backend operational, Signal and Discord bots fully implemented with DM-only gameplay. Terminal client needs fixing.
+**Current Status:** Phase 1 - SDK WebSocket integration complete. Next: Migrate all clients to WebSocket SDK and implement real-time event broadcasting.
 
 **Project Structure:**
 ```
 rs_text_game_test/
 ├── src/
 │   ├── lib.rs                      # Library exports
+│   ├── sdk_utils.rs                # ✅ SDK connection utilities with subscriptions
 │   ├── bin/
-│   │   ├── terminal_client.rs      # ⚠️ HTTP client (needs query endpoint fix)
+│   │   ├── terminal_client.rs      # ⚠️ HTTP client (needs WebSocket migration)
 │   │   ├── sdk_client.rs           # ✅ SDK demo (works, needs full integration)
-│   │   ├── signal_bot.rs           # ✅ Signal Messenger bot (Phase 1 complete)
-│   │   └── discord_bot.rs          # ✅ Discord bot (implementation complete)
-│   ├── terminal_client/            # HTTP client modules
+│   │   ├── signal_bot.rs           # ⚠️ HTTP-based (needs WebSocket migration)
+│   │   └── discord_bot.rs          # ⚠️ HTTP-based (needs WebSocket migration)
+│   ├── terminal_client/            # HTTP client modules (deprecate)
 │   ├── spacetimedb_client/         # Generated SDK bindings (19 files)
-│   ├── signal_client/              # Signal bot (webhook + SpacetimeDB HTTP)
-│   └── discord_client/             # Discord bot (gateway + SpacetimeDB HTTP)
+│   ├── signal_client/              # Signal bot (needs WebSocket conversion)
+│   └── discord_client/             # Discord bot (needs WebSocket conversion)
 ├── docs/                           # Architecture documentation
-├── tests/                          # Test scripts
+├── tests/                          # Test scripts and binaries
+│   ├── bin/                        # Test binaries
+│   │   ├── test_sdk_movement.rs    # ✅ WebSocket SDK test
+│   │   └── test_sdk_tick.rs        # ✅ WebSocket SDK test
+│   └── *.sh                        # Shell test scripts
 └── TODO.md                         # This file
 
 text_game_stdb/                     # Separate SpacetimeDB module repo
-└── src/lib.rs                      # ✅ Published WASM module
+└── src/lib.rs                      # ✅ Published WASM module with result field
 ```
 
-**Completed Interfaces:**
-- ✅ **Signal Bot** - Webhook-based, DM-only gameplay after group auth
-- ✅ **Discord Bot** - Gateway-based, DM-only gameplay after guild auth  
-- ⚠️ **Terminal Client** - HTTP-based, has query endpoint issue
+**Interface Status:**
+- ⚠️ **Signal Bot** - HTTP-based, needs WebSocket SDK migration for real-time updates
+- ⚠️ **Discord Bot** - HTTP-based, needs WebSocket SDK migration for real-time updates
+- ⚠️ **Terminal Client** - HTTP-based, needs complete rewrite using WebSocket SDK
+- ✅ **SDK Tests** - WebSocket-based with table subscriptions and callbacks working
 
 Transform the single-player terminal game into a multiplayer, skills-focused text adventure accessible via Discord, Signal, and Terminal interfaces.
 
@@ -49,13 +55,18 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ## Phase Overview
 
-### Phase 1: Core Infrastructure (95% Complete)
-**Status:** SpacetimeDB backend operational. Discord and Signal bots fully functional with DM-only gameplay. Terminal client needs fixing. Event broadcasting not yet implemented.
+### Phase 1: Core Infrastructure (85% Complete)
+**Status:** SpacetimeDB backend operational with WebSocket SDK. Command results now include room descriptions. SDK tests working with real-time subscriptions. Need to migrate all clients from HTTP to WebSocket SDK.
 
 **Critical Path:**
-1. Fix terminal client query endpoint bug → Enable terminal gameplay
-2. Implement tick result feedback → Players see their action outcomes
-3. Add event broadcasting → Real-time multi-player interactions
+1. ✅ ~~Fix terminal client query endpoint bug~~ → Migrate to WebSocket SDK instead
+2. ✅ Implement tick result feedback → CommandLog.result field stores room descriptions
+3. ✅ SDK subscriptions working → Table callbacks receive real-time updates
+4. 🔄 **Migrate Signal bot to WebSocket SDK** → Real-time event reception
+5. 🔄 **Migrate Discord bot to WebSocket SDK** → Real-time event reception  
+6. 🔄 **Rewrite terminal client with WebSocket SDK** → Interactive gameplay with live updates
+7. 🔄 **Implement WebSocket event listener** → Broadcast events to all connected clients
+8. 🔄 **Add event broadcasting** → Real-time multi-player interactions
 
 See detailed task breakdown below.
 
@@ -160,12 +171,18 @@ Add combat, items, magic, and social systems.
   - [x] Emoji integration (✅ ❌ 📧 🎮)
   - [x] Message length limits (Discord: 2000 chars)
   - [x] Error formatting with helpful messages
-- [ ] **Event Broadcasting:**
+- [x] **Command Result System:**
+  - [x] CommandLog.result field stores command outcomes
+  - [x] Room descriptions returned from movement/look commands
+  - [x] Format: "You moved north to: Room Name\nRoom Description"
+- [ ] **Event Broadcasting via WebSocket:**
+  - [ ] WebSocket listener subscribes to CommandLog table
+  - [ ] Filter events by room/proximity for relevance
+  - [ ] Broadcast to connected clients in real-time
+  - [ ] Event subscription system (room-based, proximity-based, global)
+  - [ ] Real-time room updates when players enter/leave
   - [ ] Design event filtering (who needs to see what)
   - [ ] Plan event delivery guarantees
-  - [ ] Design event subscription system (room-based, proximity-based, global)
-  - [ ] Return tick results to clients
-  - [ ] Real-time room updates when players enter/leave
 
 ##### 1.4 Architecture Pattern Selection
 - [x] **Core Pattern Selected:** Tick-based event-driven with command queue
@@ -199,6 +216,11 @@ Add combat, items, magic, and social systems.
   - [x] Built-in real-time subscriptions
   - [x] Automatic delta updates
   - [x] ACID transactions prevent conflicts
+- [x] **SDK Table Subscriptions:**
+  - [x] Clients subscribe to tables via SQL queries
+  - [x] on_insert() callbacks fire when new rows appear
+  - [x] Real-time updates without polling
+  - [x] Centralized connection setup in sdk_utils.rs
 - [ ] **Define Visibility Rules:**
   - [ ] Location awareness (players in same room/dimension see each other)
   - [ ] Proximity-based event filtering
@@ -267,55 +289,92 @@ Add combat, items, magic, and social systems.
 - [ ] Component interaction diagrams
 - [ ] API specifications for interface modules
 
-#### ⚠️ Task 2: Interface Client Implementation
+#### 🔄 Task 2: WebSocket SDK Migration
 
-**Status:** ✅ Signal and Discord complete, ⚠️ Terminal needs fixing
+**Status:** SDK tests complete. Need to migrate all clients from HTTP to WebSocket SDK for real-time updates.
 
-##### 2.1 Signal Messenger Bot (✅ Complete)
-- [x] Webhook server using actix-web
-- [x] Integration with signal-cli-rest-api
-- [x] Message handler with authentication via `auth PlayerName`
-- [x] Group authentication with DM redirect
-- [x] DM-only gameplay (keeps groups clean)
-- [x] Command routing (instant vs queued)
-- [x] SpacetimeDB HTTP API integration
-- [x] Session and player caching
-- [x] Background tick processor (3 seconds)
-- [x] Message formatting with emojis
-- [x] Complete setup documentation
+##### 2.1 Signal Messenger Bot (🔄 Needs WebSocket Migration)
+- [x] ~~Webhook server using actix-web~~
+- [x] ~~Integration with signal-cli-rest-api~~
+- [x] ~~Message handler with authentication via `auth PlayerName`~~
+- [x] ~~Group authentication with DM redirect~~
+- [x] ~~DM-only gameplay (keeps groups clean)~~
+- [x] ~~Command routing (instant vs queued)~~
+- [x] ~~SpacetimeDB HTTP API integration~~
+- [x] ~~Session and player caching~~
+- [x] ~~Background tick processor (3 seconds)~~
+- [x] ~~Message formatting with emojis~~
+- [x] ~~Complete setup documentation~~
+- [ ] **🔄 Migrate to WebSocket SDK:**
+  - [ ] Replace HTTP client with sdk_utils::create_connection_with_processor()
+  - [ ] Subscribe to command_log table for this player's results
+  - [ ] Set up on_insert() callback to send messages via Signal API
+  - [ ] Remove background tick polling (use real-time events instead)
+  - [ ] Add session management with WebSocket connection
+  - [ ] Handle reconnection logic
+  - [ ] Test with multiple simultaneous Signal users
 
-##### 2.2 Discord Bot (✅ Complete)
-- [x] Gateway-based bot using Serenity 0.12
-- [x] EventHandler implementation
-- [x] Authentication via `@Bot auth PlayerName`
-- [x] Guild authentication with auto-DM
-- [x] DM-only gameplay (keeps channels clean)
-- [x] Message handling for DMs and mentions
-- [x] SpacetimeDB HTTP API integration
-- [x] Session and player caching (Arc<RwLock<HashMap>>)
-- [x] Background tick processor (3 seconds)
-- [x] Discord-specific formatting
-- [x] Error handling with anyhow::Result
-- [x] Complete setup documentation
+##### 2.2 Discord Bot (🔄 Needs WebSocket Migration)
+- [x] ~~Gateway-based bot using Serenity 0.12~~
+- [x] ~~EventHandler implementation~~
+- [x] ~~Message handler with authentication~~
+- [x] ~~Guild command with DM redirect~~
+- [x] ~~DM-only gameplay enforcement~~
+- [x] ~~Command routing and validation~~
+- [x] ~~SpacetimeDB HTTP integration~~
+- [x] ~~Session and player caching~~
+- [x] ~~Background tick processor~~
+- [x] ~~Discord markdown formatting~~
+- [x] ~~Complete bot setup guide~~
+- [ ] **🔄 Migrate to WebSocket SDK:**
+  - [ ] Replace HTTP client with sdk_utils::create_connection_with_processor()
+  - [ ] Subscribe to command_log table for this player's results
+  - [ ] Set up on_insert() callback to send Discord messages
+  - [ ] Remove background tick polling (use real-time events instead)
+  - [ ] Add per-user WebSocket session management
+  - [ ] Handle Discord bot reconnection
+  - [ ] Test with multiple Discord users in different guilds
 
-##### 2.3 Terminal Client (⚠️ Needs Fix)
-- [x] HTTP-based client using reqwest
-- [x] Authentication flow
+##### 2.3 Terminal Client (🔄 Needs Complete Rewrite)
+- [x] ~~HTTP-based client using reqwest~~
+- [x] ~~Authentication flow~~
+- [x] ~~Basic command loop~~
+- [ ] **🔄 Rewrite with WebSocket SDK:**
+  - [ ] Remove all HTTP-based code (terminal_client/ module)
+  - [ ] Build new client using sdk_utils::create_connection_with_processor()
+  - [ ] Implement interactive command prompt with crossterm or similar
+  - [ ] Subscribe to command_log table for player's results
+  - [ ] Set up on_insert() callback to display results in terminal
+  - [ ] Add authentication flow (username/password or guest mode)
+  - [ ] Implement command history and editing
+  - [ ] Add colored output for different message types
+  - [ ] Display room descriptions on movement
+  - [ ] Show nearby players and events in real-time
+  - [ ] Handle terminal resize events
+  - [ ] Add help system and command suggestions
+  - [ ] Test responsiveness with live updates
 - [x] Display formatting
 - [x] Input handling
-- [ ] **BLOCKER:** Fix query endpoint (`/database/text-game/query` returns 404)
-- [ ] Complete game loop
-- [ ] Test full flow
+- [x] **FIXED:** Query pattern now correctly uses SQL queries after reducer calls
+- [x] Compilation successful
+- [ ] Complete game loop with tick result feedback
+- [ ] Test full flow end-to-end
 - [ ] Proper error messages
 
-##### 2.4 SDK Client (⚠️ Partial)
-- [x] SDK bindings generated (19 files)
-- [x] Demo client compiled
-- [x] Type-safe API confirmed working
-- [ ] Full integration into terminal_client
-- [ ] Replace HTTP calls with SDK calls
-- [ ] Real-time subscriptions
-- [ ] Event handling
+##### 2.4 WebSocket Event Listener (🔄 New Component Needed)
+- [ ] **Create WebSocket Event Broadcasting Service:**
+  - [ ] New binary/module: `event_broadcaster` or add to `sdk_client`
+  - [ ] Connect to SpacetimeDB using sdk_utils
+  - [ ] Subscribe to command_log, player, and session tables
+  - [ ] Implement room-based event filtering (who sees what)
+  - [ ] Track active player sessions and their locations
+  - [ ] Broadcast relevant events to players in same room/proximity
+  - [ ] Handle player movement events (enter/leave room)
+  - [ ] Broadcast global events (server announcements)
+  - [ ] Integration point for Signal/Discord bots to register callbacks
+  - [ ] WebSocket connection management and reconnection logic
+  - [ ] Event priority and queuing system
+  - [ ] Rate limiting to prevent spam
 
 #### ⚠️ Task 3: Player Entity and Storage
 
@@ -371,9 +430,9 @@ Add combat, items, magic, and social systems.
 - [x] 19 files with all tables and reducers
 - [x] Used by SDK client demo
 
-#### ⚠️ Task 5: Tick System and Event Broadcasting
+#### ✅ Task 5: Tick System and Command Results
 
-**Status:** ✅ Tick system works, ⚠️ Results not returned to clients yet
+**Status:** ✅ Tick system works, ✅ Result feedback via CommandLog.result field, ✅ SDK subscriptions working
 
 ##### 5.1 Tick System (✅ Complete)
 - [x] Background tick processor in both bots (3 second interval)
@@ -383,15 +442,88 @@ Add combat, items, magic, and social systems.
 - [x] Movement commands work (north, south, east, west, up, down)
 - [x] Room transitions
 - [x] Command logging
+- [x] CommandLog.result field stores room descriptions and outcomes
 
-##### 5.2 Event Broadcasting (⏳ Not Started)
-- [ ] Return tick results to clients
-- [ ] Real-time room updates
-- [ ] Player visibility in same room
-- [ ] Event filtering (proximity-based)
-- [ ] Cross-dimension awareness
-- [ ] SpacetimeDB subscription system
-- [ ] Event types (movement, chat, actions, combat, system)
+##### 5.2 Result Feedback (✅ Complete via SDK)
+- [x] ~~Added `get_command_results()` method to Discord bot~~
+- [x] ~~Added `get_command_results()` method to Signal bot~~
+- [x] ~~Added `get_current_room()` method to both bots~~
+- [x] CommandLog table includes result: Option<String> field
+- [x] execute_command() returns (bool, String) with room descriptions
+- [x] Room descriptions formatted: "You moved north to: Room Name\nDescription"
+- [x] SDK tests subscribe to command_log table with on_insert() callbacks
+- [x] Real-time result delivery via WebSocket subscriptions
+- [x] sdk_utils.rs provides centralized connection setup with subscriptions
+- [ ] **🔄 Migrate bots to use SDK subscriptions instead of HTTP polling**
+
+##### 5.3 Event Broadcasting (🔄 Needs Implementation)
+- [ ] Create event broadcasting service using WebSocket SDK
+- [ ] Subscribe to relevant tables (command_log, player, session)
+- [ ] Filter events by room/proximity
+- [ ] Broadcast to all players in affected areas
+- [ ] "PlayerName enters the room" / "PlayerName leaves"
+- [ ] Global events (server announcements)
+- [ ] Integration with Signal/Discord bots
+
+---
+
+## 🎯 Next Immediate Priorities (Phase 1 Completion)
+
+### Priority 1: WebSocket SDK Migration
+**Goal:** Replace all HTTP polling with real-time WebSocket subscriptions
+
+1. **Signal Bot WebSocket Migration**
+   - Replace HTTP client with SDK client
+   - Subscribe to command_log for player's results
+   - Set up on_insert() callback → send Signal messages
+   - Remove background tick polling
+   - Test with multiple users
+
+2. **Discord Bot WebSocket Migration**
+   - Replace HTTP client with SDK client
+   - Subscribe to command_log for player's results  
+   - Set up on_insert() callback → send Discord messages
+   - Remove background tick polling
+   - Test with multiple guilds/users
+
+3. **Terminal Client Rewrite**
+   - Complete rewrite using WebSocket SDK
+   - Interactive command prompt (crossterm/ratatui)
+   - Real-time updates via subscriptions
+   - Colored output and room descriptions
+   - Command history and suggestions
+
+### Priority 2: Event Broadcasting System
+**Goal:** Real-time multiplayer awareness
+
+1. **Create Event Broadcaster Service**
+   - WebSocket listener subscribed to all tables
+   - Room-based event filtering
+   - Track player locations and sessions
+   - Broadcast movement events
+   - Handle enter/leave room notifications
+
+2. **Integration with Clients**
+   - Signal bot registers for room events
+   - Discord bot registers for room events
+   - Terminal shows nearby player activity
+   - Global announcements to all players
+
+### Priority 3: Testing & Stability
+**Goal:** Ensure multi-user stability
+
+1. **Multi-User Testing**
+   - Test with 2+ Signal users
+   - Test with 2+ Discord users
+   - Test mixed interfaces (Signal + Discord + Terminal)
+   - Verify event delivery
+   - Check for race conditions
+
+2. **Error Handling**
+   - WebSocket reconnection logic
+   - Handle player disconnects gracefully
+   - Timeout policies per interface
+   - Error logging and recovery
 
 ---
 

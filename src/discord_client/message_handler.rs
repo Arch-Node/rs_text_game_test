@@ -112,14 +112,76 @@ async fn handle_game_command(ctx: &Context, msg: &Message, bot: &DiscordBot, use
             }
             return Ok(());
         }
+        "look" | "l" => {
+            // Get current room description
+            match bot.get_current_room(user_id).await {
+                Ok(Some(room_desc)) => {
+                    msg.reply(&ctx, room_desc).await?;
+                }
+                Ok(None) => {
+                    msg.reply(&ctx, "You are in an unknown location.").await?;
+                }
+                Err(e) => {
+                    log::error!("Failed to get room: {}", e);
+                    msg.reply(&ctx, "❌ Failed to look around.").await?;
+                }
+            }
+            return Ok(());
+        }
         _ => {}
     }
     
     // Submit command to SpacetimeDB
     match bot.submit_command(user_id, command).await {
-        Ok(result) => {
-            let response = formatter::format_command_result(&result);
-            msg.reply(&ctx, response).await?;
+        Ok(_) => {
+            // Send "processing" message
+            let processing_msg = msg.reply(&ctx, "⏳ Processing command...").await?;
+            
+            // Clone context and IDs for async task
+            let ctx_clone = ctx.clone();
+            let bot_clone = bot.clone();
+            let user_id_clone = user_id.to_string();
+            let channel_id = msg.channel_id;
+            
+            // Spawn task to wait for result
+            tokio::spawn(async move {
+                // Wait for tick to execute (3.5 seconds to be safe)
+                tokio::time::sleep(tokio::time::Duration::from_millis(3500)).await;
+                
+                // Get command results
+                match bot_clone.get_command_results(&user_id_clone, 1).await {
+                    Ok(results) if !results.is_empty() => {
+                        let (success, cmd, error) = &results[0];
+                        
+                        let response = if *success {
+                            // Get room description if it was a movement command
+                            if is_movement_command(cmd) {
+                                match bot_clone.get_current_room(&user_id_clone).await {
+                                    Ok(Some(room_desc)) => {
+                                        format!("✅ Moved {}\n\n{}", cmd, room_desc)
+                                    }
+                                    _ => format!("✅ Command executed: {}", cmd)
+                                }
+                            } else {
+                                format!("✅ Command executed: {}", cmd)
+                            }
+                        } else {
+                            format!("❌ Command failed: {}\n{}", cmd, error.as_deref().unwrap_or("Unknown error"))
+                        };
+                        
+                        // Edit the processing message with result
+                        let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content(response)).await;
+                    }
+                    Ok(_) => {
+                        // No results yet - might still be queued
+                        let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content("⚠️ Command queued but no result yet. Try 'look' to see your location.")).await;
+                    }
+                    Err(e) => {
+                        log::error!("Failed to get command results: {}", e);
+                        let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content("⚠️ Command submitted but couldn't fetch result.")).await;
+                    }
+                }
+            });
         }
         Err(e) => {
             let response = formatter::format_error(&format!("Command failed: {}", e));
@@ -127,4 +189,12 @@ async fn handle_game_command(ctx: &Context, msg: &Message, bot: &DiscordBot, use
         }
     }
     Ok(())
+}
+
+/// Check if a command is a movement command
+fn is_movement_command(cmd: &str) -> bool {
+    matches!(
+        cmd.to_lowercase().as_str(),
+        "north" | "south" | "east" | "west" | "up" | "down" | "n" | "s" | "e" | "w" | "u" | "d"
+    )
 }

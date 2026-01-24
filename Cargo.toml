@@ -52,3 +52,23 @@ required-features = ["signal-client"]
 name = "discord_bot"
 path = "src/bin/discord_bot.rs"
 required-features = ["discord-client"]
+
+[[bin]]
+name = "test_terminal_tick"
+path = "tests/bin/test_terminal_tick.rs"
+required-features = ["spacetimedb-http"]
+
+[[bin]]
+name = "test_player_movement"
+path = "tests/bin/test_player_movement.rs"
+required-features = ["spacetimedb-http"]
+
+[[bin]]
+name = "test_sdk_tick"
+path = "tests/bin/test_sdk_tick.rs"
+required-features = ["spacetimedb-sdk-client"]
+
+[[bin]]
+name = "test_sdk_movement"
+path = "tests/bin/test_sdk_movement.rs"
+required-features = ["spacetimedb-sdk-client"]

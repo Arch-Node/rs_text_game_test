@@ -13,6 +13,7 @@ pub struct CommandLog {
     pub executed_at: u64,
     pub success: bool,
     pub error_message: Option<String>,
+    pub result: Option<String>,
 }
 
 impl __sdk::InModule for CommandLog {

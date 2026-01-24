@@ -3,6 +3,7 @@
 // Process incoming Signal messages and route to game commands
 
 use super::bot::SignalBot;
+use anyhow::Result;
 
 impl SignalBot {
     /// Handle an incoming Signal message
@@ -113,7 +114,7 @@ impl SignalBot {
     }
     
     /// Handle game commands from authenticated users
-    async fn handle_game_command(&self, sender: &str, command: &str) -> Result<(), Box<dyn std::error::Error>> {
+    async fn handle_game_command(&self, sender: &str, command: &str) -> Result<()> {
         // Get session ID
         let session_id = self.get_or_create_session(sender).await?;
         
@@ -128,17 +129,58 @@ impl SignalBot {
         // Send acknowledgment
         self.send_message(
             sender,
-            "Command queued. Waiting for next tick..."
+            "⏳ Processing command..."
         ).await?;
         
-        // Note: Actual response will come after tick execution
-        // via a subscription/polling mechanism (not implemented yet)
+        // Clone for async task
+        let bot_clone = self.clone();
+        let sender_clone = sender.to_string();
+        
+        // Spawn task to wait for result and send it back
+        tokio::spawn(async move {
+            // Wait for tick to execute (3.5 seconds to be safe)
+            tokio::time::sleep(tokio::time::Duration::from_millis(3500)).await;
+            
+            // Get command results
+            match bot_clone.get_command_results(&sender_clone, 1).await {
+                Ok(results) if !results.is_empty() => {
+                    let (success, cmd, error) = &results[0];
+                    
+                    let response = if *success {
+                        // Get room description if it was a movement command
+                        if is_movement_command(cmd) {
+                            match bot_clone.get_current_room(&sender_clone).await {
+                                Ok(Some(room_desc)) => {
+                                    format!("✅ Moved {}\n\n{}", cmd, room_desc)
+                                }
+                                _ => format!("✅ Command executed: {}", cmd)
+                            }
+                        } else {
+                            format!("✅ Command executed: {}", cmd)
+                        }
+                    } else {
+                        format!("❌ Command failed: {}\n{}", cmd, error.as_deref().unwrap_or("Unknown error"))
+                    };
+                    
+                    // Send result
+                    let _ = bot_clone.send_message(&sender_clone, &response).await;
+                }
+                Ok(_) => {
+                    // No results yet
+                    let _ = bot_clone.send_message(&sender_clone, "⚠️ Command queued but no result yet. Try 'look' to see your location.").await;
+                }
+                Err(_) => {
+                    // Don't keep the error in scope across await
+                    let _ = bot_clone.send_message(&sender_clone, "⚠️ Command submitted but couldn't fetch result.").await;
+                }
+            }
+        });
         
         Ok(())
     }
     
     /// Handle instant commands that don't need tick processing
-    async fn handle_instant_command(&self, sender: &str, command: &str) -> Result<(), Box<dyn std::error::Error>> {
+    async fn handle_instant_command(&self, sender: &str, command: &str) -> Result<()> {
         let response = match command.to_lowercase().as_str() {
             "help" | "?" => {
                 "Available commands:\n\
@@ -147,8 +189,18 @@ impl SignalBot {
                 • System: help, quit"
             }
             "look" | "l" => {
-                // TODO: Query current room from SpacetimeDB
-                "You are in Town Square. A bustling central plaza."
+                // Get current room from SpacetimeDB
+                match self.get_current_room(sender).await {
+                    Ok(Some(room_desc)) => {
+                        self.send_message(sender, &room_desc).await?;
+                        return Ok(());
+                    }
+                    Ok(None) => "You are in an unknown location.",
+                    Err(e) => {
+                        log::error!("Failed to get room: {}", e);
+                        "❌ Failed to look around."
+                    }
+                }
             }
             "status" => {
                 // TODO: Query player status from SpacetimeDB
@@ -169,5 +221,13 @@ fn is_instant_command(command: &str) -> bool {
     matches!(
         command.to_lowercase().as_str(),
         "help" | "?" | "look" | "l" | "status" | "inventory" | "i"
+    )
+}
+
+/// Check if a command is a movement command
+fn is_movement_command(cmd: &str) -> bool {
+    matches!(
+        cmd.to_lowercase().as_str(),
+        "north" | "south" | "east" | "west" | "up" | "down" | "n" | "s" | "e" | "w" | "u" | "d"
     )
 }

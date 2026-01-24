@@ -10,6 +10,10 @@ pub mod terminal_client;
 #[cfg(feature = "spacetimedb-sdk-client")]
 pub mod spacetimedb_client;
 
+// SpacetimeDB SDK utilities (connection setup with subscriptions)
+#[cfg(feature = "spacetimedb-sdk-client")]
+pub mod sdk_utils;
+
 // Signal messenger client
 #[cfg(feature = "signal-client")]
 pub mod signal_client;

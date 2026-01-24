@@ -9,6 +9,7 @@ use reqwest::Client;
 use anyhow::Result;
 
 /// Discord bot that connects Discord to SpacetimeDB
+#[derive(Clone)]
 pub struct DiscordBot {
     /// SpacetimeDB base URL (e.g., http://localhost:3000)
     spacetime_url: String,
@@ -173,5 +174,101 @@ impl DiscordBot {
         }
         
         Ok(())
+    }
+    
+    /// Get recent command results for a player
+    /// Returns (success, command, error_message_if_any)
+    pub async fn get_command_results(&self, user_id: &str, limit: usize) -> Result<Vec<(bool, String, Option<String>)>> {
+        // First, get the player ID by querying the session
+        let session_id = self.get_or_create_session(user_id).await?;
+        
+        // Query command_log for recent commands
+        let url = format!("{}/database/sql/text-game", self.spacetime_url);
+        let query = format!(
+            "SELECT success, command, error_message FROM command_log WHERE player_id IN (SELECT player_id FROM session WHERE id = {}) ORDER BY executed_at DESC LIMIT {}",
+            session_id, limit
+        );
+        
+        let response = self.http_client
+            .post(&url)
+            .body(query)
+            .send()
+            .await?;
+        
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Failed to query command log"));
+        }
+        
+        let results: serde_json::Value = response.json().await?;
+        let mut command_results = Vec::new();
+        
+        if let Some(rows) = results.as_array() {
+            for row in rows {
+                let success = row["success"].as_bool().unwrap_or(false);
+                let command = row["command"].as_str().unwrap_or("").to_string();
+                let error_message = row["error_message"].as_str().map(|s| s.to_string());
+                command_results.push((success, command, error_message));
+            }
+        }
+        
+        Ok(command_results)
+    }
+    
+    /// Get player's current room description
+    pub async fn get_current_room(&self, user_id: &str) -> Result<Option<String>> {
+        let session_id = self.get_or_create_session(user_id).await?;
+        
+        // Query player position
+        let url = format!("{}/database/sql/text-game", self.spacetime_url);
+        let query = format!(
+            "SELECT p.position_x, p.position_y, p.position_z, p.dimension FROM player p JOIN session s ON s.player_id = p.id WHERE s.id = {}",
+            session_id
+        );
+        
+        let response = self.http_client
+            .post(&url)
+            .body(query)
+            .send()
+            .await?;
+        
+        if !response.status().is_success() {
+            return Ok(None);
+        }
+        
+        let results: serde_json::Value = response.json().await?;
+        
+        if let Some(rows) = results.as_array() {
+            if let Some(row) = rows.first() {
+                let x = row["position_x"].as_i64().unwrap_or(100);
+                let y = row["position_y"].as_i64().unwrap_or(100);
+                let z = row["position_z"].as_i64().unwrap_or(100);
+                let dimension = row["dimension"].as_str().unwrap_or("material");
+                
+                // Query room at this position
+                let room_query = format!(
+                    "SELECT name, description FROM room WHERE position_x = {} AND position_y = {} AND position_z = {} AND dimension = '{}'",
+                    x, y, z, dimension
+                );
+                
+                let room_response = self.http_client
+                    .post(&url)
+                    .body(room_query)
+                    .send()
+                    .await?;
+                
+                if room_response.status().is_success() {
+                    let room_results: serde_json::Value = room_response.json().await?;
+                    if let Some(room_rows) = room_results.as_array() {
+                        if let Some(room) = room_rows.first() {
+                            let name = room["name"].as_str().unwrap_or("Unknown");
+                            let description = room["description"].as_str().unwrap_or("");
+                            return Ok(Some(format!("**{}**\n{}", name, description)));
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(None)
     }
 }

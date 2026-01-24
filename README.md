@@ -14,6 +14,70 @@ Built with Rust and SpacetimeDB, featuring a tick-based command queue system and
 
 ---
 
+## 🚀 Quick Start
+
+### ⚠️ Note on HTTP Client
+
+The HTTP-based terminal client **does not work with SpacetimeDB's local development server** because the local server doesn't provide HTTP REST API endpoints - it only supports WebSocket (SDK) and CLI access.
+
+**Working interfaces:**
+- ✅ **SDK Client** (WebSocket) - [SDK_CLIENT_GUIDE.md](src/spacetimedb_client/SDK_CLIENT_GUIDE.md)
+- ✅ **SpacetimeDB CLI** (`spacetime call`/`spacetime sql`)
+- ❌ **HTTP Terminal Client** - Needs SpacetimeDB cloud deployment
+
+See [SPACETIMEDB_SETUP.md](SPACETIMEDB_SETUP.md) for full explanation.
+
+### Test the Backend with SDK Client
+
+The SDK client works with the local server:
+
+```bash
+# 1. Start SpacetimeDB (in a separate terminal)
+spacetime start
+
+# 2. Publish the module
+cd text_game_stdb
+spacetime publish text-game --server local
+
+# 3. Run the SDK client (WebSocket-based)
+cd ../rs_text_game_test
+cargo run --features spacetimedb-sdk-client --bin sdk_client
+```
+
+### Test with CLI Commands
+
+```bash
+# Connect session
+spacetime call text-game connect_session '"terminal"' '"test-123"' --server local
+
+# Authenticate player  
+spacetime call text-game authenticate_player '1' '"TestPlayer"' --server local
+
+# Submit command
+spacetime call text-game submit_command '1' '"look"' --server local
+
+# Execute tick
+spacetime call text-game execute_tick --server local
+
+# Query data
+spacetime sql text-game "SELECT * FROM player" --server local
+```
+
+### End-to-End Test (Shows HTTP Limitations)
+
+```bash
+# This publishes the module successfully
+# but shows expected 404 errors for HTTP client tests
+./end_to_end_test.sh
+```
+
+The test will show:
+- ✅ Module publishing works
+- ✅ CLI commands work  
+- ❌ HTTP client tests fail (expected - no HTTP API on local server)
+
+---
+
 ## 🎮 Key Features
 
 - **Skills-Heavy Gameplay:** Crafting, persuasion, stealth, exploration-focused
