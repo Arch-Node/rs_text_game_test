@@ -21,6 +21,28 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [x] Document design philosophy
 - [x] Break down implementation into phases
 
+#### ⬜ Task 1a: Define Multiplayer State Model
+- [ ] Define authoritative GameState for multiple players
+- [ ] Identify shared vs per-player state
+- [ ] Add player/session identifiers to core models
+- [ ] Plan world tick and update cadence
+
+#### ⬜ Task 1b: Define Command/Message Protocol
+- [ ] Define inbound command envelope (player/session, input, metadata)
+- [ ] Define outbound response envelope (messages, errors, events)
+- [ ] Standardize command routing for all interfaces
+- [ ] Map output formats for terminal, Signal, and SMS
+
+#### ⬜ Task 1c: Define Session Abstraction
+- [ ] Create session interface for terminal, Signal, and SMS
+- [ ] Decide how sessions map to players (account vs character)
+- [ ] Plan connection lifecycle (connect, idle, disconnect, reconnect)
+
+#### ⬜ Task 1d: Logging & Error Strategy
+- [ ] Define logging levels and structured fields (session, player, command)
+- [ ] Choose logging crates and error handling patterns
+- [ ] Plan for tracing async flows and server diagnostics
+
 #### ⬜ Task 1: Design Multiplayer Architecture
 - [ ] Design server-client architecture with shared game state
 - [ ] Decide: turn-based vs real-time mechanics
@@ -28,13 +50,6 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Design message broadcasting system
 - [ ] Plan player sessions/authentication
 - [ ] Consider concurrent player management
-
-#### ⬜ Task 2: Add Networking Dependencies
-- [ ] Add `tokio` for async runtime
-- [ ] Add Signal protocol support (libsignal-service-rs or signal-cli wrapper)
-- [ ] Add websocket/TCP libraries for terminal interface
-- [ ] Add SMS gateway support (twilio-rs or similar)
-- [ ] Update Cargo.toml with all necessary crates
 
 #### ⬜ Task 3: Create Player Entity System
 - [ ] Expand Player model with name/id
@@ -44,6 +59,13 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Add experience points system
 - [ ] Add equipped items
 - [ ] Create PlayerManager to track all connected players
+
+#### ⬜ Task 2: Add Networking Dependencies
+- [ ] Add `tokio` for async runtime
+- [ ] Add Signal protocol support (libsignal-service-rs or signal-cli wrapper)
+- [ ] Add websocket/TCP libraries for terminal interface
+- [ ] Add SMS gateway support (twilio-rs or similar)
+- [ ] Update Cargo.toml with all necessary crates
 
 #### ⬜ Task 16: Add Persistence Layer
 - [ ] Choose database (SQLite for simple, PostgreSQL for production)
