@@ -21,53 +21,44 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [x] Document design philosophy
 - [x] Break down implementation into phases
 
-#### ⬜ Task 1a: Define Multiplayer State Model
+#### ⬜ Task 1: Design Multiplayer Architecture
 - [ ] Define authoritative GameState for multiple players
 - [ ] Identify shared vs per-player state
 - [ ] Add player/session identifiers to core models
-- [ ] Plan world tick and update cadence
-
-#### ⬜ Task 1b: Define Command/Message Protocol
 - [ ] Define inbound command envelope (player/session, input, metadata)
 - [ ] Define outbound response envelope (messages, errors, events)
 - [ ] Standardize command routing for all interfaces
 - [ ] Map output formats for terminal, Signal, and SMS
-
-#### ⬜ Task 1c: Define Session Abstraction
 - [ ] Create session interface for terminal, Signal, and SMS
 - [ ] Decide how sessions map to players (account vs character)
 - [ ] Plan connection lifecycle (connect, idle, disconnect, reconnect)
-
-#### ⬜ Task 1d: Logging & Error Strategy
-- [ ] Define logging levels and structured fields (session, player, command)
-- [ ] Choose logging crates and error handling patterns
-- [ ] Plan for tracing async flows and server diagnostics
-
-#### ⬜ Task 1: Design Multiplayer Architecture
 - [ ] Design server-client architecture with shared game state
 - [ ] Decide: turn-based vs real-time mechanics
 - [ ] Plan state synchronization strategy
 - [ ] Design message broadcasting system
 - [ ] Plan player sessions/authentication
-- [ ] Consider concurrent player management
-
-#### ⬜ Task 3: Create Player Entity System
-- [ ] Expand Player model with name/id
-- [ ] Add inventory system
-- [ ] Add stats (health, mana, stamina)
-- [ ] Add skill levels
-- [ ] Add experience points system
-- [ ] Add equipped items
-- [ ] Create PlayerManager to track all connected players
+- [ ] Plan world tick and update cadence
 
 #### ⬜ Task 2: Add Networking Dependencies
 - [ ] Add `tokio` for async runtime
 - [ ] Add Signal protocol support (libsignal-service-rs or signal-cli wrapper)
 - [ ] Add websocket/TCP libraries for terminal interface
 - [ ] Add SMS gateway support (twilio-rs or similar)
+- [ ] Define logging levels and structured fields (session, player, command)
+- [ ] Choose logging crates and error handling patterns
+- [ ] Plan for tracing async flows and server diagnostics
 - [ ] Update Cargo.toml with all necessary crates
 
-#### ⬜ Task 16: Add Persistence Layer
+#### ⬜ Task 3: Create Player Entity System
+- [ ] Expand Player model with name/id
+- [ ] Add inventory system reference
+- [ ] Add stats (health, mana, stamina)
+- [ ] Add skill levels
+- [ ] Add experience points system
+- [ ] Add equipped items
+- [ ] Create PlayerManager to track all connected players
+
+#### ⬜ Task 4: Add Persistence Layer
 - [ ] Choose database (SQLite for simple, PostgreSQL for production)
 - [ ] Design schema for player data
 - [ ] Implement world state saving
@@ -75,7 +66,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Enable server restart recovery
 - [ ] Add save/load operations
 
-#### ⬜ Task 9: Create Server Module
+#### ⬜ Task 5: Create Server Module
 - [ ] Build game server core
 - [ ] Implement world state management
 - [ ] Add player connection handling
@@ -88,7 +79,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ### Phase 2: Skills & Character Systems
 
-#### ⬜ Task 4: Design Skills System
+#### ⬜ Task 6: Design Skills System
 - [ ] Create skill categories (exploration, crafting, social, magic, survival, etc.)
 - [ ] Implement skill levels and experience
 - [ ] Add skill check mechanics
@@ -97,7 +88,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Make skills the primary gameplay mechanic
 - [ ] Create skill tree structure
 
-#### ⬜ Task 5: Implement Character Classes
+#### ⬜ Task 7: Implement Character Classes
 - [ ] Create Scholar class (research/knowledge focus)
 - [ ] Create Diplomat class (social/persuasion focus)
 - [ ] Create Artificer class (crafting/invention focus)
@@ -106,7 +97,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Define unique skill bonuses per class
 - [ ] Balance class abilities
 
-#### ⬜ Task 19: Add Skill Training Mechanics
+#### ⬜ Task 8: Add Skill Training Mechanics
 - [ ] Implement learn-by-doing system (XP from skill use)
 - [ ] Create skill trainers (NPCs that teach)
 - [ ] Add skill books/scrolls
@@ -118,7 +109,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ### Phase 3: Game Content Systems
 
-#### ⬜ Task 6: Create Inventory and Item System
+#### ⬜ Task 9: Create Inventory and Item System
 - [ ] Design Item model with types (consumables, tools, equipment, quest items)
 - [ ] Add weight/encumbrance system
 - [ ] Implement durability mechanics
@@ -128,7 +119,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Implement equipping/unequipping system
 - [ ] Build item creation/builder functions for procedural generation
 
-#### ⬜ Task 8: Add NPC System
+#### ⬜ Task 10: Add NPC System
 - [ ] Create NPC models
 - [ ] Build NPC creation/builder functions for procedural generation
 - [ ] Implement dialogue trees
@@ -137,7 +128,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Add quest giver functionality
 - [ ] Implement reputation tracking per NPC/faction
 
-#### ⬜ Task 14: Create Quest System
+#### ⬜ Task 11: Create Quest System
 - [ ] Design quest framework
 - [ ] Create skill-based quest objectives
 - [ ] Implement multiple solution paths
@@ -146,7 +137,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Create quest chains
 - [ ] Add dynamic quest generation
 
-#### ⬜ Task 13: Add Crafting System
+#### ⬜ Task 12: Add Crafting System
 - [ ] Design recipe system requiring specific skill levels
 - [ ] Implement resource gathering
 - [ ] Create item creation mechanics
@@ -154,14 +145,14 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Enable experimentation/discovery of new recipes
 - [ ] Balance crafting progression
 
-#### ⬜ Task 15: Implement Puzzle and Skill Challenges
+#### ⬜ Task 13: Implement Puzzle and Skill Challenges
 - [ ] Create lockpicking (requires dexterity skill)
 - [ ] Add research puzzles (requires knowledge skills)
 - [ ] Implement social challenges (persuasion/deception)
 - [ ] Create environmental puzzles (perception/investigation)
 - [ ] Balance challenge difficulty
 
-#### ⬜ Task 18: Implement Time and World Events
+#### ⬜ Task 14: Implement Time and World Events
 - [ ] Add day/night cycle
 - [ ] Create weather effects that impact skills
   - Rain affects tracking
@@ -173,7 +164,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ### Phase 4: Combat (Lightweight)
 
-#### ⬜ Task 7: Implement Combat System (Light)
+#### ⬜ Task 15: Implement Combat System (Light)
 - [ ] Design initiative based on perception skill
 - [ ] Create attack/defense rolls using weapon/armor skills
 - [ ] Add option to avoid combat through stealth/persuasion skills
@@ -186,7 +177,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ### Phase 5: AI-Powered Content Generation
 
-#### ⬜ Task 23: Integrate AI for Dynamic Content
+#### ⬜ Task 16: Integrate AI for Dynamic Content
 - [ ] Research local AI options (llama.cpp, mistral, etc.) vs cloud APIs (OpenAI, Anthropic, etc.)
 - [ ] Add AI client dependencies to Cargo.toml
 - [ ] Create AI service layer with abstraction for local/cloud switching
@@ -212,7 +203,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ### Phase 6: Network Interfaces
 
-#### ⬜ Task 11: Implement Terminal Interface (Refactor Existing)
+#### ⬜ Task 17: Implement Terminal Interface (Refactor Existing)
 - [ ] Refactor current terminal interface to connect to server
 - [ ] Add connection handling
 - [ ] Implement async input/output
@@ -220,7 +211,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Improve formatting for better readability
 - [ ] Handle disconnection/reconnection
 
-#### ⬜ Task 10: Implement Signal Interface
+#### ⬜ Task 18: Implement Signal Interface
 - [ ] Create Signal protocol client/bot
 - [ ] Use libsignal or signal-cli wrapper
 - [ ] Implement message parsing
@@ -228,7 +219,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Format responses appropriately
 - [ ] Manage player sessions via phone numbers
 
-#### ⬜ Task 12: Implement Text/SMS Interface
+#### ⬜ Task 19: Implement Text/SMS Interface
 - [ ] Create text message interface using Twilio or similar
 - [ ] Implement SMS parsing
 - [ ] Handle response chunking (SMS length limits)
@@ -239,7 +230,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ### Phase 7: Multiplayer Features
 
-#### ⬜ Task 17: Create Player Interaction Commands
+#### ⬜ Task 20: Create Player Interaction Commands
 - [ ] Add chat commands (say/tell/whisper)
 - [ ] Implement trade system with other players
 - [ ] Add examine other players
@@ -248,7 +239,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
   - Teach skills to other players
   - Collaborate on challenges
 
-#### ⬜ Task 20: Create Admin/Game Master Tools
+#### ⬜ Task 21: Create Admin/Game Master Tools
 - [ ] Build admin commands for spawning items/NPCs
 - [ ] Add teleporting players
 - [ ] Enable world modification
@@ -260,7 +251,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ### Phase 8: Testing & Documentation
 
-#### ⬜ Task 21: Write Comprehensive Tests
+#### ⬜ Task 22: Write Comprehensive Tests
 - [ ] Add unit tests for skills system
 - [ ] Test combat mechanics
 - [ ] Test inventory management
@@ -269,7 +260,7 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 - [ ] Test server-client communication
 - [ ] Test persistence layer
 
-#### ⬜ Task 22: Create Documentation
+#### ⬜ Task 23: Create Documentation
 - [ ] Document multiplayer architecture
 - [ ] Write skills system guide
 - [ ] Create player handbook
@@ -281,8 +272,21 @@ Transform the single-player terminal game into a multiplayer, skills-focused tex
 
 ## Current Status
 **Phase:** Planning Complete  
-**Next Steps:** Begin Phase 1 with Task 3 (Player Entity System) or Task 4 (Skills System)  
+**Next Steps:** Begin Phase 1 with Task 1 (Multiplayer Architecture) or Task 6 (Skills System)  
 **Date:** January 23, 2026
+
+---
+
+## Task Summary
+- **Total Tasks:** 23 (plus Task 0 completed)
+- **Phase 1 (Infrastructure):** Tasks 1-5
+- **Phase 2 (Skills & Classes):** Tasks 6-8
+- **Phase 3 (Content Systems):** Tasks 9-14
+- **Phase 4 (Combat):** Task 15
+- **Phase 5 (AI Generation):** Task 16
+- **Phase 6 (Network Interfaces):** Tasks 17-19
+- **Phase 7 (Multiplayer):** Tasks 20-21
+- **Phase 8 (Testing & Docs):** Tasks 22-23
 
 ---
 
