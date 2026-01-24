@@ -2,6 +2,8 @@
 
 A modular, extensible text-based adventure game engine written in Rust. Features a layered world system with multiple z-levels, player classes with distinct abilities, and a flexible output system designed for both terminal and GUI interfaces.
 
+> **🚧 Development Roadmap:** This project is being transformed into a multiplayer, skills-heavy game with support for Signal, terminal, and SMS interfaces. See [TODO.md](TODO.md) for the complete development roadmap and current status.
+
 ## Project Structure
 
 ```
