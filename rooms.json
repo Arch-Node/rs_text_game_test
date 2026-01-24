@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "world_name": "Layered Realms",
+    "version": 1,
+    "notes": "Rooms have layer (dimension) and x,y,z (3D position). Currently all on layer 0."
+  },
+
+  "start": { "layer": 0, "x": 0, "y": 0, "z": 0 },
+
+  "layers": [
+    { "layer": 0, "name": "Main", "scale": 1 }
+  ],
+
+  "rooms": [
+    {
+      "id": "basement",
+      "pos": { "layer": 0, "x": 0, "y": 0, "z": -1 },
+      "name": "Basement",
+      "desc": "Damp stone. A faint hum in the walls.",
+      "exits": { 
+        "e": { "to_rel": { "dx": 1, "dy": 0, "dz": 0 } }
+      }
+    },
+    {
+      "id": "narrow_hall",
+      "pos": { "layer": 0, "x": 1, "y": 0, "z": -1 },
+      "name": "Narrow Hall",
+      "desc": "A tight hallway with old plaster and a cold draft. There is a ladder leading up.",
+      "exits": { 
+        "w": { "to_rel": { "dx": -1, "dy": 0, "dz": 0 } },
+        "up": { "to_rel": { "dx": 0, "dy": 0, "dz": 1 } }
+      }
+    },
+    { 
+      "id": "wide_hall",
+      "pos": { "layer": 0, "x": 1, "y": 0, "z": 0 },
+      "name": "Wide Hall",
+      "desc": "A wide hallway with high ceilings. You can see a ladder going down.",
+      "exits": { 
+        "w": { "to_rel": { "dx": -1, "dy": 0, "dz": 0 } },
+        "down": { "to_rel": { "dx": 0, "dy": 0, "dz": -1 } }
+      }
+    },
+    { 
+      "id": "entrance",
+      "pos": { "layer": 0, "x": 0, "y": 0, "z": 0 },
+      "name": "Entrance",
+      "desc": "A grand entrance hall with marble floors.",
+      "exits": { 
+        "e": { "to_rel": { "dx": 1, "dy": 0, "dz": 0 } }
+      }
+    }
+  ],
+
+  "anchors": [
+    { "id": "gate", "label": "Iron Gate", "pos": { "layer": 0, "x": 1, "y": 0, "z": 0 } }
+  ]
+}
+
