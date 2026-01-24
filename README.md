@@ -7,9 +7,9 @@ Built with Rust and SpacetimeDB, featuring a tick-based command queue system and
 > **🚧 Development Status:** 
 > - ✅ SpacetimeDB backend complete with Room table and 3D movement
 > - ✅ SDK client bindings generated (type-safe API)
-> - ✅ **Signal Messenger bot** (Phase 1 complete - see [SIGNAL_STATUS.md](SIGNAL_STATUS.md))
+> - ✅ **Signal Messenger bot** (Phase 1 complete - see [SIGNAL_STATUS.md](src/signal_client/SIGNAL_STATUS.md))
 > - ⚠️ Terminal/SMS interfaces need completion
-> - See [TODO.md](TODO.md) for full roadmap, [SDK_CLIENT_GUIDE.md](SDK_CLIENT_GUIDE.md) for SDK setup
+> - See [TODO.md](TODO.md) for full roadmap, [SDK_CLIENT_GUIDE.md](src/spacetimedb_client/SDK_CLIENT_GUIDE.md) for SDK setup
 
 ---
 
@@ -49,6 +49,8 @@ Built with Rust and SpacetimeDB, featuring a tick-based command queue system and
 
 **Dimensions:** Separate 3D spatial planes (material, ethereal, shadow, dream) that can shift and interact but maintain independent coordinate systems.
 
+> **📝 Terminology Note:** The SpacetimeDB backend and documentation use the term "dimension" to refer to separate spatial planes (material, ethereal, etc.). The legacy single-player code in `src/models.rs` uses the term "layer" for the same concept. Both terms refer to the same architectural feature.
+
 ---
 
 ## 📁 Project Structure
@@ -63,21 +65,35 @@ rs_text_game_test/          # Main game project
 │   ├── main.rs            # Single-player terminal game (original)
 │   ├── bin/
 │   │   ├── terminal_client.rs  # HTTP-based client (needs fix)
-│   │   └── sdk_client.rs       # SDK-based client (demo)
+│   │   ├── sdk_client.rs       # SDK-based client (demo)
+│   │   └── signal_bot.rs       # Signal Messenger bot (✅ Phase 1 complete)
 │   ├── terminal_client/   # HTTP client modules
 │   │   ├── client.rs      # TerminalClient (needs query pattern fix)
 │   │   ├── auth.rs        # Authentication flow
 │   │   ├── display.rs     # Display formatting
-│   │   └── input.rs       # Input handling
+│   │   ├── input.rs       # Input handling
+│   │   └── TERMINAL_CLIENT_STATUS.md  # Testing status and known issues
 │   ├── spacetimedb_client/ # Generated SDK bindings (19 files)
 │   │   ├── mod.rs         # Main module
 │   │   ├── player_type.rs, room_type.rs, session_type.rs
-│   │   └── *_reducer.rs   # Type-safe reducer APIs
+│   │   ├── *_reducer.rs   # Type-safe reducer APIs
+│   │   └── SDK_CLIENT_GUIDE.md  # SDK setup and usage guide
+│   ├── signal_client/     # Signal bot modules (✅ complete)
+│   │   ├── bot.rs         # SignalBot core implementation
+│   │   ├── webhook.rs     # HTTP webhook server
+│   │   ├── message_handler.rs  # Message processing
+│   │   ├── formatter.rs   # Signal message formatting
+│   │   ├── mod.rs         # Module exports
+│   │   ├── SIGNAL_STATUS.md  # Integration status
+│   │   ├── SIGNAL_BOT_SETUP.md  # Setup guide
+│   │   ├── SIGNAL_IMPLEMENTATION_SUMMARY.md
+│   │   ├── SIGNAL_INTEGRATION.md
+│   │   └── CONFIGURATION_GUIDE.md
 │   ├── models.rs          # Core data structures
 │   ├── commands.rs        # Command parsing
 │   ├── world.rs           # World loading
 │   ├── output.rs          # Message output
-│   └── multiplayer/       # Multiplayer architecture
+│   └── multiplayer/       # Multiplayer architecture (legacy/design reference)
 │       ├── types.rs, player.rs, session.rs, state.rs
 │       ├── command_queue.rs, validation.rs, events.rs
 │       └── tick.rs
@@ -86,8 +102,10 @@ rs_text_game_test/          # Main game project
 │   ├── multiplayer-state-design.md
 │   ├── spacetimedb-integration.md
 │   └── spacetimedb-quickstart.md
-├── SDK_CLIENT_GUIDE.md    # SDK setup and usage guide
-├── TERMINAL_CLIENT_STATUS.md  # Testing status and issues
+├── tests/                 # Test scripts
+│   ├── test_backend.sh    # Backend validation script
+│   └── test_signal_bot.sh # Signal bot validation script
+├── bot_config.toml.example  # Bot configuration example
 └── TODO.md                # Complete development roadmap
 
 text_game_stdb/            # SpacetimeDB module (separate repo/dir)
@@ -156,7 +174,18 @@ cargo run --bin sdk_client --features spacetimedb-sdk-client
 cargo run --bin terminal_client --features spacetimedb-http
 ```
 
-See [SDK_CLIENT_GUIDE.md](SDK_CLIENT_GUIDE.md) for detailed setup.
+**Signal Messenger Bot (✅ Phase 1 Complete):**
+```bash
+# Set environment variables
+export BOT_NUMBER="+15551234567"          # Your Signal number
+export SIGNAL_API_URL="http://localhost:8080"
+export SPACETIME_URL="http://localhost:3000"
+
+# Run the bot
+cargo run --features signal-client --bin signal_bot
+```
+
+See [SDK_CLIENT_GUIDE.md](src/spacetimedb_client/SDK_CLIENT_GUIDE.md) for SDK details and [SIGNAL_BOT_SETUP.md](src/signal_client/SIGNAL_BOT_SETUP.md) for Signal bot setup.
 
 ### Test Multiplayer Backend
 
@@ -217,19 +246,22 @@ spacetime sql text-game -s local "SELECT * FROM command_log"
 - ✅ Room table with 3D coordinates (10 test rooms)
 - ✅ Full 6-directional movement (n/s/e/w/up/down)
 - ✅ SDK client bindings generated (type-safe API)
+- ✅ **Signal messenger integration** (Phase 1 complete, webhook-based)
 - ⚠️ Terminal interface integration (SDK demo complete, full connection pending)
-- ⬜ Signal messenger integration
 - ⬜ SMS gateway integration
 
-See [TODO.md](TODO.md) for complete roadmap, [SDK_CLIENT_GUIDE.md](SDK_CLIENT_GUIDE.md) for SDK details.
+See [TODO.md](TODO.md) for complete roadmap, [SDK_CLIENT_GUIDE.md](src/spacetimedb_client/SDK_CLIENT_GUIDE.md) for SDK details.
 
 ---
 
 ## 📚 Documentation
 
-- **[SDK Client Guide](SDK_CLIENT_GUIDE.md)** - SpacetimeDB SDK setup and usage
-- **[Terminal Client Status](TERMINAL_CLIENT_STATUS.md)** - Testing status and known issues
-- [Multiplayer Architecture](src/multiplayer/README.md) - Detailed system design with SpacetimeDB
+- **[SDK Client Guide](src/spacetimedb_client/SDK_CLIENT_GUIDE.md)** - SpacetimeDB SDK setup and usage
+- **[Signal Status](src/signal_client/SIGNAL_STATUS.md)** - Signal Messenger integration status (✅ Phase 1 complete)
+- **[Signal Bot Setup](src/signal_client/SIGNAL_BOT_SETUP.md)** - Signal bot setup and configuration guide
+- **[Terminal Client Status](src/terminal_client/TERMINAL_CLIENT_STATUS.md)** - Testing status and known issues
+- **[Configuration Guide](src/signal_client/CONFIGURATION_GUIDE.md)** - Bot configuration methods
+- [Multiplayer Architecture](src/multiplayer/README.md) - Detailed system design (legacy/reference)
 - [SpacetimeDB Integration](docs/spacetimedb-integration.md) - Backend architecture choices
 - [Architecture Analysis](docs/architecture-analysis.md) - Single-player → multiplayer transition
 - [State Design](docs/multiplayer-state-design.md) - Tick-based command queue design

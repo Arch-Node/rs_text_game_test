@@ -5,6 +5,11 @@
 use std::collections::HashMap;
 
 /// Coordinate in 3D space with layer (layer = which dimension/realm, x,y,z = position within)
+/// 
+/// **Note:** This legacy single-player code uses `layer` to represent what the multiplayer
+/// SpacetimeDB backend calls `dimension` (material, ethereal, shadow, dream). Both refer to
+/// the same concept: separate 3D spatial planes that can shift/interact but maintain
+/// independent coordinate systems.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Coord {
     pub layer: i32,

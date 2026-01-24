@@ -9,7 +9,8 @@
 - `default`: No features (single-player only)
 - `spacetimedb-http`: Terminal client with HTTP API
 - `spacetimedb-sdk-client`: Terminal client with SDK (vendored OpenSSL)
-- Binaries: `rust_game_test` (main), `terminal_client`, `sdk_client`
+- `signal-client`: Signal Messenger bot with webhook server
+- Binaries: `rust_game_test` (main), `terminal_client`, `sdk_client`, `signal_bot`
 
 ### `Cargo.lock`
 **Status:** ✅ Active (auto-generated)  
@@ -29,37 +30,27 @@
 - Development status
 
 ### `TODO.md`
-**Status:** ✅ Active (just updated)  
+**Status:** ✅ Active  
 **Purpose:** Complete 23-task development roadmap  
 **Recent Updates:** Marked Room table and SDK generation complete
-
-### `SDK_CLIENT_GUIDE.md`
-**Status:** ✅ Active (newly created)  
-**Purpose:** SpacetimeDB SDK setup and usage guide  
-**Contents:**
-- Generated bindings structure
-- Build instructions
-- How to regenerate bindings
-- SDK vs HTTP comparison
-- Next steps
-
-### `TERMINAL_CLIENT_STATUS.md`
-**Status:** ✅ Active (testing reference)  
-**Purpose:** Backend testing status and known issues  
-**Contents:**
-- Test room map (10 rooms)
-- API mismatch documentation
-- Three solution approaches
-- Manual testing commands
 
 ### `ROOT_FILES.md`
 **Status:** ✅ Active (this file)  
 **Purpose:** Quick reference for all root files
 
+### `bot_config.toml.example`
+**Status:** ✅ Active (example file)  
+**Purpose:** Example TOML configuration for Signal bot (not yet implemented)
+
+> **📝 Note:** Module-specific documentation has been moved into respective directories:
+> - SDK docs: [src/spacetimedb_client/SDK_CLIENT_GUIDE.md](src/spacetimedb_client/SDK_CLIENT_GUIDE.md)
+> - Terminal client docs: [src/terminal_client/TERMINAL_CLIENT_STATUS.md](src/terminal_client/TERMINAL_CLIENT_STATUS.md)
+> - Signal client docs: [src/signal_client/](src/signal_client/) (5 files)
+
 ## 🧪 Testing
 
-### `test_backend.sh`
-**Status:** ✅ Active (just updated)  
+### `tests/test_backend.sh`
+**Status:** ✅ Active  
 **Purpose:** Automated backend health check  
 **Tests:**
 - Server status (localhost:3000/health)
@@ -69,8 +60,23 @@
 
 **Usage:**
 ```bash
-chmod +x test_backend.sh
-./test_backend.sh
+chmod +x tests/test_backend.sh
+./tests/test_backend.sh
+```
+
+### `tests/test_signal_bot.sh`
+**Status:** ✅ Active  
+**Purpose:** Automated Signal bot validation  
+**Tests:**
+- signal-cli-rest-api status
+- SpacetimeDB running
+- Configuration validation
+- Bot build test
+
+**Usage:**
+```bash
+chmod +x tests/test_signal_bot.sh
+./tests/test_signal_bot.sh
 ```
 
 ## 📦 Data Files
@@ -92,11 +98,12 @@ chmod +x test_backend.sh
 **Status:** ✅ Active  
 **Contents:**
 - `main.rs` - Single-player game
-- `bin/` - Multiple binaries (terminal_client, sdk_client)
-- `terminal_client/` - HTTP client modules
-- `spacetimedb_client/` - Generated SDK bindings (19 files)
+- `bin/` - Multiple binaries (terminal_client, sdk_client, signal_bot)
+- `terminal_client/` - HTTP client modules + TERMINAL_CLIENT_STATUS.md
+- `spacetimedb_client/` - Generated SDK bindings (19 files) + SDK_CLIENT_GUIDE.md
+- `signal_client/` - Signal bot modules + documentation (5 .md files)
 - Core modules: models, commands, world, output
-- `multiplayer/` - Architecture modules
+- `multiplayer/` - Architecture modules (legacy/design reference)
 
 ### `docs/`
 **Status:** ✅ Active  
@@ -118,6 +125,14 @@ chmod +x test_backend.sh
 **Purpose:** Cargo build artifacts  
 **Action:** Gitignored, auto-regenerated
 
+### `tests/`
+**Status:** ✅ Active  
+**Purpose:** Test scripts and integration tests  
+**Contents:**
+- `test_backend.sh` - SpacetimeDB backend validation
+- `test_signal_bot.sh` - Signal bot validation
+- Future: Rust integration tests can go here
+
 ## 🔧 Configuration
 
 ### `.gitignore`
@@ -137,18 +152,19 @@ chmod +x test_backend.sh
 
 | File | Status | Action |
 |------|--------|--------|
-| Cargo.toml | ✅ Active | Keep - updated with SDK features |
+| Cargo.toml | ✅ Active | Keep - updated with SDK and Signal features |
 | Cargo.lock | ✅ Active | Keep - auto-generated |
-| README.md | ✅ Active | Keep - just updated |
+| README.md | ✅ Active | Keep - main documentation |
 | TODO.md | ✅ Active | Keep - tracks progress |
-| SDK_CLIENT_GUIDE.md | ✅ Active | Keep - new SDK docs |
-| TERMINAL_CLIENT_STATUS.md | ✅ Active | Keep - testing reference |
 | ROOT_FILES.md | ✅ Active | Keep - this file |
-| test_backend.sh | ✅ Active | Keep - useful testing tool |
+| bot_config.toml.example | ✅ Active | Keep - example config |
+| test_backend.sh | ➡️ Moved | Now in tests/ directory |
+| test_signal_bot.sh | ➡️ Moved | Now in tests/ directory |
 | rooms.json | ⚠️ Legacy | Keep for now - marked deprecated |
-| src/ | ✅ Active | Keep - main code |
+| src/ | ✅ Active | Keep - main code (with module docs) |
 | docs/ | ✅ Active | Keep - architecture docs |
 | examples/ | ✅ Active | Keep - ready for future examples |
+| tests/ | ✅ Active | Keep - test scripts |
 | target/ | ✅ Active | Keep - build artifacts |
 | .gitignore | ✅ Active | Keep - git config |
 | LICENSE | ✅ Active | Keep - legal |
