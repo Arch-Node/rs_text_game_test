@@ -1,2 +1,5 @@
 target/
 Cargo.lock
+self_notes.md
+discord_bot.log
+.env

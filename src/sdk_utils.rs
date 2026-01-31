@@ -20,7 +20,9 @@ pub fn create_connection(
     let queries = vec![
         "SELECT * FROM command_log".to_string(),
         "SELECT * FROM player".to_string(),
-        "SELECT * FROM session".to_string()
+        "SELECT * FROM session".to_string(),
+        "SELECT * FROM room".to_string(),
+        "SELECT * FROM queued_command".to_string(),
     ];
     conn.subscription_builder()
         .subscribe(queries);
@@ -41,7 +43,11 @@ pub async fn create_connection_with_processor(
     // Spawn background task to process WebSocket messages
     let conn_clone = conn.clone();
     tokio::spawn(async move {
-        let _ = conn_clone.run_async().await;
+        log::info!("🔌 WebSocket message processor started");
+        match conn_clone.run_async().await {
+            Ok(_) => log::info!("🔌 WebSocket processor completed"),
+            Err(e) => log::error!("🔌 WebSocket processor error: {:?}", e),
+        }
     });
     
     Ok(conn)

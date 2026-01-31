@@ -9,6 +9,28 @@ serde_json = "1"
 log = "0.4"
 env_logger = "0.11"
 anyhow = "1"
+
+# ============================================================================
+# EVENT OPTIMIZATION DEPENDENCIES (See docs/evnet_structure.md)
+# ============================================================================
+# Uncomment these dependencies when implementing event structure optimizations:
+#
+# PHASE 2: Binary Encoding (choose one or both)
+# rmp-serde = "1"                    # MessagePack serialization (compact, fast)
+# cbor4ii = { version = "0.3", features = ["serde1", "use_std"] }  # CBOR serialization
+#
+# PHASE 3: Dictionary Compression
+# flate2 = "1"                        # DEFLATE compression (if not using permessage-deflate)
+# lz4 = "1"                           # Alternative: LZ4 compression (faster)
+#
+# Example usage after adding:
+# ```rust
+# use rmp_serde::{Serializer, Deserializer};
+# let encoded = rmp_serde::to_vec(&event)?;
+# let decoded: GameEvent = rmp_serde::from_slice(&encoded)?;
+# ```
+# ============================================================================
+
 # Tokio needed for async clients
 tokio = { version = "1", features = ["full"], optional = true }
 # For SpacetimeDB SDK client - use vendored OpenSSL to avoid system dependency

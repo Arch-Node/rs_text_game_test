@@ -32,8 +32,10 @@ impl EventHandler for Handler {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize logging
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    // Initialize logging - suppress noisy dependencies
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or("info,serenity::gateway=error,tracing=error,spacetimedb_sdk=warn")
+    ).init();
     
     // Get configuration from environment
     let discord_token = env::var("DISCORD_TOKEN")

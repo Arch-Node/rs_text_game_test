@@ -4,6 +4,90 @@
 //
 // This module sets up callbacks to monitor other players' actions and broadcast
 // events in real-time, enabling true multiplayer awareness.
+//
+// ============================================================================
+// EVENT STRUCTURE OPTIMIZATION ROADMAP (See docs/evnet_structure.md)
+// ============================================================================
+//
+// PHASE 1: Transport-Level Compression (permessage-deflate)
+// ----------------------------------------------------------
+// - Enable WebSocket permessage-deflate extension on SpacetimeDB connections
+// - Achieves 70-90% bandwidth reduction with no code changes
+// - Check if SpacetimeDB SDK supports this natively
+// - Effort: Low (configuration only)
+//
+// PHASE 2: Binary Encoding (MessagePack/CBOR)
+// --------------------------------------------
+// Required changes to this file:
+//   1. Add serde derives to GameEvent:
+//      #[derive(Debug, Clone, Serialize, Deserialize)]
+//   2. Add format negotiation enum:
+//      pub enum EventFormat { Json, MessagePack, Cbor }
+//   3. Add serialization helper:
+//      pub fn serialize_event(event: &GameEvent, format: EventFormat) -> Vec<u8>
+//   4. Add deserialization helper:
+//      pub fn deserialize_event(data: &[u8], format: EventFormat) -> Result<GameEvent>
+//   5. Support dual mode (JSON for debugging, binary for production)
+//
+// Dependencies needed:
+//   - serde = { version = "1", features = ["derive"] }
+//   - rmp-serde = "1" (MessagePack) OR cbor4ii = "0.3" (CBOR)
+//
+// Effort: Medium (1-2 days)
+//
+// PHASE 3: Protocol-Level Dictionary Compression
+// -----------------------------------------------
+// Required changes to this file:
+//   1. Add numeric event type IDs:
+//      pub enum EventTypeId {
+//          PlayerMoved = 1,
+//          PlayerJoined = 2,
+//          PlayerLeft = 3,
+//          PlayerAction = 4,
+//      }
+//   2. Add string intern table:
+//      pub struct StringTable {
+//          next_id: u32,
+//          strings: HashMap<String, u32>,
+//          reverse: HashMap<u32, String>,
+//      }
+//   3. Add string interning for repeated values:
+//      - player_name (tracked per session)
+//      - dimension ("main", "dungeon", etc.)
+//      - action commands ("look", "move", etc.)
+//   4. Add StringTableAdd event:
+//      StringTableAdd { id: u32, value: String }
+//   5. Add schema versioning:
+//      pub const EVENT_SCHEMA_VERSION: u32 = 1;
+//   6. Add schema handshake on connection
+//
+// Example optimized format:
+//   Before: {"type":"Text","data":{"channel":"Narration","text":"hi"}}
+//   After:  [1,[0,"hi"]]  (where 1=TextEvent, 0=Narration)
+//
+// Effort: High (3-5 days)
+//
+// PHASE 4: Delta/State Compression
+// ---------------------------------
+// Required changes to this file:
+//   1. Track previous state per player:
+//      pub struct PlayerState {
+//          last_position: (i32, i32, i32, String),
+//          last_hp: i32,
+//          // ... other tracked state
+//      }
+//   2. Add delta event variants:
+//      PlayerMovedDelta { to_x: Option<i32>, to_y: Option<i32>, ... }
+//   3. Only send changed fields in events
+//   4. Client-side state reconstruction
+//
+// Effort: Medium-High (2-3 days)
+//
+// RECOMMENDED START: Phase 2 (Binary Encoding)
+// - Gives 50-70% bandwidth reduction
+// - Cleanly scoped and testable
+// - Provides foundation for Phase 3-4
+// ============================================================================
 
 use crate::spacetimedb_client::{
     DbConnection, Player, PlayerTableAccess, CommandLog, CommandLogTableAccess,
@@ -13,6 +97,9 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 
 /// Events that can be broadcast to players
+///
+/// PHASE 2 TODO: Add serde derives for binary serialization:
+/// #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(Debug, Clone)]
 pub enum GameEvent {
     /// Another player moved to a new location

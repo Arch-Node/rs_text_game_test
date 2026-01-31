@@ -1,6 +1,25 @@
 // signal_client/bot.rs
 //
 // Core Signal bot implementation using WebSocket SDK for SpacetimeDB
+//
+// EVENT OPTIMIZATION CHANGES NEEDED (See docs/evnet_structure.md):
+// ------------------------------------------------------------------
+// PHASE 2: Binary Encoding
+//   - Update event handling to support binary/JSON formats
+//   - Add format negotiation during player authentication
+//   - Deserialize events based on configured format
+//   - Keep JSON mode for debugging Signal webhook payloads
+//
+// PHASE 3: Dictionary Compression
+//   - Maintain per-player string tables (HashMap<phone_number, StringTable>)
+//   - Handle StringTableAdd events in background task
+//   - Resolve string IDs before formatting for Signal messages
+//   - Store in event_channels metadata
+//
+// PHASE 4: Delta Compression
+//   - Track previous state per phone number
+//   - Reconstruct full events from deltas before sending to Signal
+//   - Important for mobile data usage optimization
 
 use std::collections::HashMap;
 use std::sync::Arc;

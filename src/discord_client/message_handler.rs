@@ -59,13 +59,39 @@ pub async fn handle_message(ctx: &Context, msg: &Message, bot: &DiscordBot) -> R
                         msg.reply(&ctx, response).await?;
                         
                         // Try to send them a DM with instructions
-                        if let Ok(dm_channel) = msg.author.create_dm_channel(&ctx.http).await {
-                            let dm_message = formatter::format_welcome(name);
-                            let _ = dm_channel.say(&ctx.http, dm_message).await;
+                        match msg.author.create_dm_channel(&ctx.http).await {
+                            Ok(dm_channel) => {
+                                let dm_message = formatter::format_welcome(name);
+                                match dm_channel.say(&ctx.http, dm_message).await {
+                                    Ok(_) => log::info!("Sent welcome DM to user {}", msg.author.tag()),
+                                    Err(e) => log::warn!("Failed to send DM to user {}: {}", msg.author.tag(), e),
+                                }
+                            }
+                            Err(e) => log::warn!("Failed to create DM channel for user {}: {}", msg.author.tag(), e),
                         }
                     } else {
                         // Already in DM, send full welcome
-                        let response = formatter::format_welcome(name);
+                        let mut response = formatter::format_welcome(name);
+                        
+                        // Wait briefly for SpacetimeDB to sync player data
+                        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                        
+                        // Try to get current room description
+                        match bot.get_current_room(&user_id).await {
+                            Ok(Some(room_desc)) => {
+                                // We got the room! Add it to the message
+                                response.push_str(&format!("\n\n{}", room_desc));
+                            }
+                            Ok(None) => {
+                                // No room found (shouldn't happen but handle it)
+                                response.push_str("\n\n📍 You are in an unknown location. Try using `look` to see your surroundings.");
+                            }
+                            Err(e) => {
+                                // Error getting room (log it but don't fail)
+                                log::warn!("Failed to get room on auth: {}", e);
+                            }
+                        }
+
                         msg.reply(&ctx, response).await?;
                     }
                 }
@@ -119,7 +145,7 @@ async fn handle_game_command(ctx: &Context, msg: &Message, bot: &DiscordBot, use
                     msg.reply(&ctx, room_desc).await?;
                 }
                 Ok(None) => {
-                    msg.reply(&ctx, "You are in an unknown location.").await?;
+                    msg.reply(&ctx, "You are in an unknown location. Try using the command: `teleport 100 100 100 material` to go to the starting room.").await?;
                 }
                 Err(e) => {
                     log::error!("Failed to get room: {}", e);
@@ -129,6 +155,24 @@ async fn handle_game_command(ctx: &Context, msg: &Message, bot: &DiscordBot, use
             return Ok(());
         }
         _ => {}
+    }
+    
+    // Check if this is a movement command and validate it
+    if is_movement_command(&cmd_lower) {
+        match bot.is_valid_direction(user_id, &cmd_lower).await {
+            Ok(false) => {
+                msg.reply(&ctx, "❌ You can't go that way! Use `look` to see available exits.").await?;
+                return Ok(());
+            }
+            Err(e) => {
+                log::error!("Failed to validate direction: {}", e);
+                msg.reply(&ctx, "❌ Failed to validate movement.").await?;
+                return Ok(());
+            }
+            Ok(true) => {
+                // Direction is valid, continue
+            }
+        }
     }
     
     // Submit command to SpacetimeDB
@@ -145,22 +189,38 @@ async fn handle_game_command(ctx: &Context, msg: &Message, bot: &DiscordBot, use
             
             // Spawn task to wait for result
             tokio::spawn(async move {
-                // Wait for tick to execute (3.5 seconds to be safe)
-                tokio::time::sleep(tokio::time::Duration::from_millis(3500)).await;
+                // Wait for tick to execute - poll multiple times with delays
+                let mut attempts = 0;
+                let max_attempts = 8;  // Try for up to 4 seconds (8 * 500ms)
                 
-                // Get command result from WebSocket SDK callback
-                match bot_clone.get_command_result(&user_id_clone).await {
-                    Ok(Some(result)) => {
-                        // Edit the processing message with result
-                        let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content(result)).await;
-                    }
-                    Ok(None) => {
-                        // No result yet - might still be queued
-                        let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content("⚠️ Command queued but no result yet. Try 'look' to see your location.")).await;
-                    }
-                    Err(e) => {
-                        log::error!("Failed to get command result: {}", e);
-                        let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content("⚠️ Command submitted but couldn't fetch result.")).await;
+                loop {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    attempts += 1;
+                    
+                    log::info!("🔄 Polling for result, attempt {}/{}", attempts, max_attempts);
+                    
+                    // Check for result
+                    match bot_clone.get_command_result(&user_id_clone).await {
+                        Ok(Some(result)) => {
+                            // Found result! Edit the processing message
+                            log::info!("✅ Found result on attempt {}: {}", attempts, result);
+                            let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content(result)).await;
+                            break;
+                        }
+                        Ok(None) => {
+                            // No result yet
+                            if attempts >= max_attempts {
+                                log::warn!("❌ No result after {} attempts", attempts);
+                                let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content("⚠️ Command queued but no result yet. Try 'look' to see your location.")).await;
+                                break;
+                            }
+                            // Continue polling
+                        }
+                        Err(e) => {
+                            log::error!("Failed to get command result: {}", e);
+                            let _ = channel_id.edit_message(&ctx_clone.http, processing_msg.id, serenity::builder::EditMessage::new().content("⚠️ Command submitted but couldn't fetch result.")).await;
+                            break;
+                        }
                     }
                 }
             });

@@ -238,6 +238,28 @@ impl TerminalClient {
     
     /// Check for and return pending multiplayer events
     /// Returns None if no events are available
+    ///
+    /// EVENT OPTIMIZATION CHANGES NEEDED (See docs/evnet_structure.md):
+    /// ----------------------------------------------------------------
+    /// PHASE 2: Binary Encoding
+    ///   - Accept both JSON and binary event formats
+    ///   - Add format parameter to connection config
+    ///   - Deserialize events based on negotiated format:
+    ///     match format {
+    ///         EventFormat::Json => serde_json::from_slice(&data)?,
+    ///         EventFormat::MessagePack => rmp_serde::from_slice(&data)?,
+    ///     }
+    ///
+    /// PHASE 3: Dictionary Compression
+    ///   - Maintain local string table for interned strings
+    ///   - Handle StringTableAdd events to populate table
+    ///   - Resolve string IDs back to strings for display
+    ///   - Example: player_name_id: 42 -> "Alice" (from local table)
+    ///
+    /// PHASE 4: Delta Compression
+    ///   - Maintain previous state for this player
+    ///   - Reconstruct full state from delta events
+    ///   - Example: PlayerMovedDelta { to_x: Some(5) } + previous state
     pub fn poll_event(&mut self) -> Option<String> {
         if let Some(ref mut rx) = self.event_rx {
             // Try to receive without blocking
